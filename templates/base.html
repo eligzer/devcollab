@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="DevCollab — A developer collaboration platform for sharing projects and code.">
+    <title>{% block title %}DevCollab{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="navbar-inner">
+            <a href="{{ url_for('main.index') }}" class="navbar-brand">⟨/⟩ DevCollab</a>
+            <ul class="navbar-links">
+                <li><a href="{{ url_for('projects.list_projects') }}">Projects</a></li>
+                <li><a href="{{ url_for('notes.list_notes') }}">Class Notebook</a></li>
+                <li><a href="{{ url_for('activity.feed') }}">Activity</a></li>
+                {% if current_user.is_authenticated %}
+                    <li><a href="{{ url_for('projects.create_project') }}">New Project</a></li>
+                    {% if current_user.is_admin %}
+                        <li><a href="{{ url_for('admin.invite_codes') }}">Admin</a></li>
+                    {% endif %}
+                    <li><a href="{{ url_for('auth.logout') }}">Sign Out ({{ current_user.username }})</a></li>
+                {% else %}
+                    <li><a href="{{ url_for('auth.login') }}">Sign In</a></li>
+                    <li><a href="{{ url_for('auth.register') }}" class="nav-cta">Get Started</a></li>
+                {% endif %}
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="flash-messages">
+            {% for category, message in messages %}
+            <div class="flash flash-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- Main Content -->
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        &copy; 2026 DevCollab. Built for developers, by developers.
+    </footer>
+
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

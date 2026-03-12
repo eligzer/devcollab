@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Create Account — DevCollab{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="form-wrapper glass-card animate-in">
+        <h2>Create Account</h2>
+        <p class="form-subtitle">Join the DevCollab community</p>
+
+        <form method="POST" novalidate>
+            {{ form.hidden_tag() }}
+
+            <div class="form-group">
+                {{ form.invite_code.label }}
+                {{ form.invite_code(class="form-control", placeholder="Enter your invite code", id="register-invite-code") }}
+                {% for error in form.invite_code.errors %}
+                    <small class="text-sm" style="color: var(--danger);">{{ error }}</small>
+                {% endfor %}
+            </div>
+
+            <div class="form-group">
+                {{ form.username.label }}
+                {{ form.username(class="form-control", placeholder="Choose a username", id="register-username") }}
+                {% for error in form.username.errors %}
+                    <small class="text-sm" style="color: var(--danger);">{{ error }}</small>
+                {% endfor %}
+            </div>
+
+            <div class="form-group">
+                {{ form.email.label }}
+                {{ form.email(class="form-control", placeholder="you@example.com", id="register-email") }}
+                {% for error in form.email.errors %}
+                    <small class="text-sm" style="color: var(--danger);">{{ error }}</small>
+                {% endfor %}
+            </div>
+
+            <div class="form-group">
+                {{ form.password.label }}
+                {{ form.password(class="form-control", placeholder="Minimum 6 characters", id="register-password") }}
+                {% for error in form.password.errors %}
+                    <small class="text-sm" style="color: var(--danger);">{{ error }}</small>
+                {% endfor %}
+            </div>
+
+            <div class="form-group">
+                {{ form.password2.label }}
+                {{ form.password2(class="form-control", placeholder="Confirm your password", id="register-password2") }}
+                {% for error in form.password2.errors %}
+                    <small class="text-sm" style="color: var(--danger);">{{ error }}</small>
+                {% endfor %}
+            </div>
+
+            {{ form.submit(class="btn btn-primary btn-submit", id="register-submit") }}
+        </form>
+
+        <p class="text-center mt-3 text-sm text-muted">
+            Already have an account? <a href="{{ url_for('auth.login') }}">Sign in</a>
+        </p>
+    </div>
+</div>
+{% endblock %}

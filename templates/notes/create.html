@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}New Note — DevCollab{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="form-wrapper glass-card animate-in" style="max-width: 640px;">
+        <h2>Create a Note</h2>
+        <p class="form-subtitle">Share class notes, lab experiments, or study materials</p>
+
+        <form method="POST" novalidate>
+            {{ form.hidden_tag() }}
+
+            <div class="form-group">
+                {{ form.title.label }}
+                {{ form.title(class="form-control", placeholder="e.g. Chapter 5 — Data Structures", id="note-title") }}
+                {% for error in form.title.errors %}
+                    <small class="text-sm" style="color: var(--danger);">{{ error }}</small>
+                {% endfor %}
+            </div>
+
+            <div class="form-group">
+                {{ form.content.label }}
+                {{ form.content(class="form-control", placeholder="Write your notes here…", id="note-content", style="min-height: 300px;") }}
+                {% for error in form.content.errors %}
+                    <small class="text-sm" style="color: var(--danger);">{{ error }}</small>
+                {% endfor %}
+            </div>
+
+            {{ form.submit(class="btn btn-primary btn-submit", id="note-submit") }}
+        </form>
+    </div>
+</div>
+{% endblock %}

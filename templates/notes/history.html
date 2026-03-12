@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}History{% if note %} — {{ note.title }}{% endif %} — DevCollab{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="snippet-detail-header animate-in">
+        <h1>📜 Edit History</h1>
+        {% if note %}
+            <p>Version history for <strong>{{ note.title }}</strong></p>
+        {% else %}
+            <p class="text-muted">This note has been deleted. Showing archived history.</p>
+        {% endif %}
+    </div>
+
+    {% if entries %}
+    <div class="snippet-list" style="margin-top: 1.5rem;">
+        {% for entry in entries %}
+        <div class="glass-card animate-in" style="animation-delay: {{ loop.index0 * 0.06 }}s; margin-bottom: 1rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem;">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <span style="font-weight: 700; font-size: 0.9rem;">Version {{ loop.index }}</span>
+                    {% if entry.action_type == 'create' %}
+                        <span class="language-badge" style="background: rgba(16,185,129,0.12); color: var(--success); border-color: rgba(16,185,129,0.2);">Created</span>
+                    {% elif entry.action_type == 'edit' %}
+                        <span class="language-badge" style="background: rgba(99,102,241,0.12); color: var(--accent-primary-hover); border-color: rgba(99,102,241,0.2);">Edited</span>
+                    {% elif entry.action_type == 'delete' %}
+                        <span class="language-badge" style="background: rgba(239,68,68,0.12); color: var(--danger); border-color: rgba(239,68,68,0.2);">Deleted</span>
+                    {% endif %}
+                </div>
+                <span class="text-sm text-muted">{{ entry.edited_at.strftime('%B %d, %Y %I:%M %p') }}</span>
+            </div>
+            <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
+                {% if entry.action_type == 'create' %}
+                    Created by <strong>{{ entry.edited_by }}</strong>
+                {% elif entry.action_type == 'edit' %}
+                    Edited by <strong>{{ entry.edited_by }}</strong>
+                {% elif entry.action_type == 'delete' %}
+                    Deleted by <strong>{{ entry.edited_by }}</strong>
+                {% endif %}
+            </p>
+            <details style="cursor: pointer;">
+                <summary style="font-size: 0.85rem; color: var(--accent-primary); font-weight: 500; padding: 0.25rem 0;">
+                    {% if entry.action_type == 'edit' %}View previous content{% else %}View content{% endif %}
+                </summary>
+                <div style="margin-top: 0.75rem; padding: 1rem; background: var(--bg-input); border-radius: var(--radius-sm); white-space: pre-wrap; font-size: 0.85rem; line-height: 1.7; max-height: 400px; overflow-y: auto;">{{ entry.previous_content }}</div>
+            </details>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state glass-card">
+        <p>No history entries found.</p>
+    </div>
+    {% endif %}
+
+    <div class="mt-3">
+        {% if note %}
+            <a href="{{ url_for('notes.detail', note_id=note.id) }}" class="btn btn-outline">← Back to Note</a>
+        {% else %}
+            <a href="{{ url_for('notes.list_notes') }}" class="btn btn-outline">← All Notes</a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

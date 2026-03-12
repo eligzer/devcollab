@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}New Snippet — {{ project.name }} — DevCollab{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="form-wrapper glass-card animate-in" style="max-width: 640px;">
+        <h2>Share a Snippet</h2>
+        <p class="form-subtitle">Add code to <strong>{{ project.name }}</strong></p>
+
+        <form method="POST" novalidate>
+            {{ form.hidden_tag() }}
+
+            <div class="form-group">
+                {{ form.title.label }}
+                {{ form.title(class="form-control", placeholder="e.g. API endpoint handler", id="snippet-title") }}
+                {% for error in form.title.errors %}
+                    <small class="text-sm" style="color: var(--danger);">{{ error }}</small>
+                {% endfor %}
+            </div>
+
+            <div class="form-group">
+                {{ form.language.label }}
+                {{ form.language(class="form-control", id="snippet-language") }}
+            </div>
+
+            <div class="form-group">
+                {{ form.description.label }}
+                {{ form.description(class="form-control", placeholder="Brief description of this snippet…", id="snippet-description") }}
+                {% for error in form.description.errors %}
+                    <small class="text-sm" style="color: var(--danger);">{{ error }}</small>
+                {% endfor %}
+            </div>
+
+            <div class="form-group">
+                {{ form.code.label }}
+                {{ form.code(class="form-control code-input", placeholder="Paste your code here…", id="snippet-code") }}
+                {% for error in form.code.errors %}
+                    <small class="text-sm" style="color: var(--danger);">{{ error }}</small>
+                {% endfor %}
+            </div>
+
+            {{ form.submit(class="btn btn-primary btn-submit", id="snippet-submit") }}
+        </form>
+    </div>
+</div>
+{% endblock %}

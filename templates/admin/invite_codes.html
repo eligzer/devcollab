@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Admin — Invite Codes — DevCollab{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="projects-header">
+        <h1>🔑 Invite Codes</h1>
+    </div>
+
+    <!-- Generate form -->
+    <div class="glass-card animate-in" style="margin-bottom: 2rem; max-width: 480px;">
+        <h3 style="margin-bottom: 1rem;">Generate New Codes</h3>
+        <form method="POST" novalidate style="display: flex; align-items: flex-end; gap: 1rem; flex-wrap: wrap;">
+            {{ form.hidden_tag() }}
+            <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 120px;">
+                {{ form.count.label }}
+                {{ form.count(class="form-control", id="invite-count", style="max-width: 120px;") }}
+                {% for error in form.count.errors %}
+                    <small class="text-sm" style="color: var(--danger);">{{ error }}</small>
+                {% endfor %}
+            </div>
+            {{ form.submit(class="btn btn-primary", id="generate-codes-btn") }}
+        </form>
+    </div>
+
+    <!-- Codes table -->
+    {% if codes %}
+    <div class="glass-card animate-in" style="animation-delay: 0.1s; overflow-x: auto;">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Status</th>
+                    <th>Created By</th>
+                    <th>Created</th>
+                    <th>Used By</th>
+                    <th>Used At</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for code in codes %}
+                <tr>
+                    <td><code class="invite-code-value">{{ code.code }}</code></td>
+                    <td>
+                        {% if code.used_by %}
+                            <span class="status-badge status-used">Used</span>
+                        {% elif not code.is_active %}
+                            <span class="status-badge status-inactive">Inactive</span>
+                        {% else %}
+                            <span class="status-badge status-active">Active</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ code.created_by }}</td>
+                    <td>{{ code.created_at.strftime('%b %d, %Y') }}</td>
+                    <td>{{ code.used_by or '—' }}</td>
+                    <td>{{ code.used_at.strftime('%b %d, %Y %I:%M %p') if code.used_at else '—' }}</td>
+                    <td>
+                        {% if code.is_active and not code.used_by %}
+                        <form method="POST" action="{{ url_for('admin.deactivate_code', code_id=code.id) }}" style="display:inline;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-danger" style="padding: 0.3rem 0.75rem; font-size: 0.8rem;">Deactivate</button>
+                        </form>
+                        {% else %}
+                        —
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state glass-card">
+        <p>No invite codes yet. Generate some above!</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

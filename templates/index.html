@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}DevCollab — Developer Collaboration Platform{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <span class="hero-badge">🚀 Open Collaboration</span>
+    <h1>Build Together,<br><span class="gradient-text">Ship Faster</span></h1>
+    <p>A modern platform for developers to collaborate on projects, share code snippets, and build amazing software together.</p>
+    <div class="hero-actions">
+        {% if current_user.is_authenticated %}
+            <a href="{{ url_for('projects.create_project') }}" class="btn btn-primary">Create a Project</a>
+            <a href="{{ url_for('projects.list_projects') }}" class="btn btn-outline">Browse Projects</a>
+        {% else %}
+            <a href="{{ url_for('auth.register') }}" class="btn btn-primary">Get Started Free</a>
+            <a href="{{ url_for('projects.list_projects') }}" class="btn btn-outline">Explore Projects</a>
+        {% endif %}
+    </div>
+</section>
+
+<div class="container">
+    <div class="features-grid">
+        <div class="feature-card animate-in delay-1">
+            <div class="feature-icon">🔐</div>
+            <h3>Secure Authentication</h3>
+            <p>Create your account with encrypted password storage and session-based authentication. Your data stays safe.</p>
+        </div>
+        <div class="feature-card animate-in delay-2">
+            <div class="feature-icon">📁</div>
+            <h3>Project Management</h3>
+            <p>Organize your work into projects. Create, browse, and manage collaborative codebases all in one place.</p>
+        </div>
+        <div class="feature-card animate-in delay-3">
+            <div class="feature-icon">💻</div>
+            <h3>Code Sharing</h3>
+            <p>Share code snippets with syntax highlighting for 20+ languages. Beautiful, readable, and instantly shareable.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

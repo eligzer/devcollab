@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Sign In — DevCollab{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="form-wrapper glass-card animate-in">
+        <h2>Welcome Back</h2>
+        <p class="form-subtitle">Sign in to your DevCollab account</p>
+
+        <form method="POST" novalidate>
+            {{ form.hidden_tag() }}
+
+            <div class="form-group">
+                {{ form.username.label }}
+                {{ form.username(class="form-control", placeholder="Enter your username", id="login-username") }}
+                {% for error in form.username.errors %}
+                    <small class="text-sm" style="color: var(--danger);">{{ error }}</small>
+                {% endfor %}
+            </div>
+
+            <div class="form-group">
+                {{ form.password.label }}
+                {{ form.password(class="form-control", placeholder="Enter your password", id="login-password") }}
+                {% for error in form.password.errors %}
+                    <small class="text-sm" style="color: var(--danger);">{{ error }}</small>
+                {% endfor %}
+            </div>
+
+            {{ form.submit(class="btn btn-primary btn-submit", id="login-submit") }}
+        </form>
+
+        <p class="text-center mt-3 text-sm text-muted">
+            Don't have an account? <a href="{{ url_for('auth.register') }}">Create one</a>
+        </p>
+    </div>
+</div>
+{% endblock %}

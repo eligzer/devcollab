@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}{{ project.name }} — DevCollab{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="project-detail-header animate-in">
+        <h1>{{ project.name }}</h1>
+        {% if project.description %}
+            <p>{{ project.description }}</p>
+        {% endif %}
+        <div class="project-detail-meta">
+            <span>👤 {{ project.owner.username }}</span>
+            <span>📅 Created {{ project.created_at.strftime('%B %d, %Y') }}</span>
+            <span>📝 {{ snippets|length }} snippet{{ 's' if snippets|length != 1 else '' }}</span>
+        </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="snippets-section">
+        <h2>
+            Code Snippets
+            {% if current_user.is_authenticated %}
+                <a href="{{ url_for('snippets.create_snippet', project_id=project.id) }}" class="btn btn-primary" id="add-snippet-btn">+ Add Snippet</a>
+            {% endif %}
+        </h2>
+
+        {% if snippets %}
+        <div class="snippet-list">
+            {% for snippet in snippets %}
+            <a href="{{ url_for('snippets.detail', snippet_id=snippet.id) }}" class="snippet-item" id="snippet-item-{{ snippet.id }}">
+                <h4>{{ snippet.title }}</h4>
+                <div class="snippet-item-meta">
+                    <span class="language-badge">{{ snippet.language }}</span>
+                    <span>by {{ snippet.author.username }}</span>
+                    <span>{{ snippet.created_at.strftime('%b %d, %Y') }}</span>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <p>No snippets in this project yet.</p>
+            {% if current_user.is_authenticated %}
+                <a href="{{ url_for('snippets.create_snippet', project_id=project.id) }}" class="btn btn-primary">Share the first snippet</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

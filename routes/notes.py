@@ -1,0 +1,134 @@
+from datetime import datetime, timezone
+from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask_login import login_required, current_user
+from models import db, ClassNote, ClassNoteHistory, Comment
+from forms import ClassNoteForm, CommentForm
+from utils import log_activity
+
+notes_bp = Blueprint('notes', __name__, url_prefix='/notes')
+
+
+@notes_bp.route('/')
+def list_notes():
+    notes = ClassNote.query.order_by(ClassNote.updated_at.desc()).all()
+    return render_template('notes/list.html', notes=notes)
+
+
+@notes_bp.route('/new', methods=['GET', 'POST'])
+@login_required
+def create_note():
+    form = ClassNoteForm()
+    if form.validate_on_submit():
+        note = ClassNote(
+            title=form.title.data,
+            content=form.content.data,
+            created_by=current_user.username
+        )
+        db.session.add(note)
+        db.session.flush()
+
+        history = ClassNoteHistory(
+            note_id=note.id,
+            previous_content=form.content.data,
+            edited_by=current_user.username,
+            action_type='create'
+        )
+        db.session.add(history)
+        log_activity(current_user.id, 'create_note', 'note', note.id,
+                     f'{current_user.username} created the Class Note "{note.title}"')
+        db.session.commit()
+        flash('Note created!', 'success')
+        return redirect(url_for('notes.detail', note_id=note.id))
+
+    return render_template('notes/create.html', form=form)
+
+
+@notes_bp.route('/<int:note_id>')
+def detail(note_id):
+    note = ClassNote.query.get_or_404(note_id)
+    last_edit = note.history.first()
+    comments = note.comments.order_by(Comment.created_at.asc()).all()
+    comment_form = CommentForm()
+    return render_template('notes/detail.html', note=note, last_edit=last_edit,
+                           comments=comments, comment_form=comment_form)
+
+
+@notes_bp.route('/<int:note_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_note(note_id):
+    note = ClassNote.query.get_or_404(note_id)
+    form = ClassNoteForm(obj=note)
+
+    if form.validate_on_submit():
+        history = ClassNoteHistory(
+            note_id=note.id,
+            previous_content=note.content,
+            edited_by=current_user.username,
+            action_type='edit'
+        )
+        db.session.add(history)
+
+        note.title = form.title.data
+        note.content = form.content.data
+        note.updated_at = datetime.now(timezone.utc)
+        log_activity(current_user.id, 'edit_note', 'note', note.id,
+                     f'{current_user.username} edited the Class Note "{note.title}"')
+        db.session.commit()
+        flash('Note updated!', 'success')
+        return redirect(url_for('notes.detail', note_id=note.id))
+
+    return render_template('notes/edit.html', form=form, note=note)
+
+
+@notes_bp.route('/<int:note_id>/delete', methods=['POST'])
+@login_required
+def delete_note(note_id):
+    note = ClassNote.query.get_or_404(note_id)
+    note_title = note.title
+
+    history = ClassNoteHistory(
+        note_id=note.id,
+        previous_content=note.content,
+        edited_by=current_user.username,
+        action_type='delete'
+    )
+    db.session.add(history)
+    log_activity(current_user.id, 'delete_note', 'note', note.id,
+                 f'{current_user.username} deleted the Class Note "{note_title}"')
+    db.session.delete(note)
+    db.session.commit()
+    flash('Note deleted. The edit history has been preserved.', 'info')
+    return redirect(url_for('notes.list_notes'))
+
+
+@notes_bp.route('/<int:note_id>/history')
+def history(note_id):
+    note = ClassNote.query.get(note_id)
+    entries = ClassNoteHistory.query.filter_by(note_id=note_id) \
+        .order_by(ClassNoteHistory.edited_at.asc()).all()
+
+    if not entries and not note:
+        flash('No history found for this note.', 'warning')
+        return redirect(url_for('notes.list_notes'))
+
+    return render_template('notes/history.html', note=note, entries=entries, note_id=note_id)
+
+
+@notes_bp.route('/<int:note_id>/comment', methods=['POST'])
+@login_required
+def comment_note(note_id):
+    note = ClassNote.query.get_or_404(note_id)
+    form = CommentForm()
+    if form.validate_on_submit():
+        comment = Comment(
+            content=form.content.data,
+            author_id=current_user.id,
+            note_id=note.id
+        )
+        db.session.add(comment)
+        db.session.flush()
+        log_activity(current_user.id, 'comment', 'comment', comment.id,
+                     f'{current_user.username} commented on Class Note "{note.title}"')
+        db.session.commit()
+        flash('Comment posted!', 'success')
+    return redirect(url_for('notes.detail', note_id=note.id))

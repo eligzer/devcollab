@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Class Notebook — DevCollab{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="projects-header">
+        <h1>📓 Class Notebook</h1>
+        {% if current_user.is_authenticated %}
+            <a href="{{ url_for('notes.create_note') }}" class="btn btn-primary" id="new-note-btn">+ New Note</a>
+        {% endif %}
+    </div>
+
+    {% if notes %}
+    <div class="project-grid">
+        {% for note in notes %}
+        <a href="{{ url_for('notes.detail', note_id=note.id) }}" class="project-card animate-in" style="animation-delay: {{ loop.index0 * 0.08 }}s;" id="note-card-{{ note.id }}">
+            <h3>{{ note.title }}</h3>
+            <p>{{ note.content[:150] }}{% if note.content|length > 150 %}…{% endif %}</p>
+            <div class="project-meta">
+                <span>👤 {{ note.created_by }}</span>
+                <span>📅 {{ note.updated_at.strftime('%b %d, %Y %I:%M %p') }}</span>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state glass-card">
+        <p>No notes yet. Start sharing your class notes!</p>
+        {% if current_user.is_authenticated %}
+            <a href="{{ url_for('notes.create_note') }}" class="btn btn-primary">Create the First Note</a>
+        {% else %}
+            <a href="{{ url_for('auth.register') }}" class="btn btn-primary">Get Started</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

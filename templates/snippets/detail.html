@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}{{ snippet.title }} — DevCollab{% endblock %}
+
+{% block extra_head %}
+<style>{{ highlight_css }}</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="snippet-detail-header animate-in">
+        <h1>{{ snippet.title }}</h1>
+        {% if snippet.description %}
+            <p>{{ snippet.description }}</p>
+        {% endif %}
+        <div class="snippet-detail-meta">
+            <span class="language-badge">{{ snippet.language }}</span>
+            <span>by {{ snippet.author.username }}</span>
+            <span>in <a href="{{ url_for('projects.detail', project_id=snippet.project.id) }}">{{ snippet.project.name }}</a></span>
+            <span>{{ snippet.created_at.strftime('%B %d, %Y') }}</span>
+        </div>
+        {% if snippet.edited_by and snippet.updated_at %}
+        <div class="snippet-detail-meta mt-1" style="color: var(--accent-secondary); font-size: 0.85rem;">
+            <span>✏️ Last edited by <strong>{{ snippet.edited_by }}</strong> at {{ snippet.updated_at.strftime('%B %d, %Y %I:%M %p') }}</span>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="code-block animate-in" style="animation-delay: 0.15s;">
+        {{ highlighted_code }}
+    </div>
+
+    <div class="mt-3" style="display: flex; gap: 0.75rem;">
+        <a href="{{ url_for('projects.detail', project_id=snippet.project.id) }}" class="btn btn-outline">← Back to {{ snippet.project.name }}</a>
+        {% if current_user.is_authenticated %}
+            <a href="{{ url_for('snippets.edit_snippet', snippet_id=snippet.id) }}" class="btn btn-primary" id="edit-snippet-btn">✏️ Edit Snippet</a>
+        {% endif %}
+    </div>
+
+    <!-- Comments Section -->
+    <hr class="divider">
+    <div class="comments-section animate-in" style="animation-delay: 0.25s;">
+        <h2 class="comments-heading">💬 Discussion <span class="comment-count">{{ comments|length }}</span></h2>
+
+        {% if comments %}
+        <div class="comment-thread">
+            {% for comment in comments %}
+            <div class="comment-card" id="comment-{{ comment.id }}">
+                <div class="comment-header">
+                    <span class="comment-avatar">{{ comment.author.username[0]|upper }}</span>
+                    <div>
+                        <strong class="comment-author">{{ comment.author.username }}</strong>
+                        <span class="comment-time">{{ comment.created_at.strftime('%b %d, %Y %I:%M %p') }}</span>
+                    </div>
+                </div>
+                <div class="comment-body">{{ comment.content }}</div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-muted text-sm" style="margin-bottom: 1.5rem;">No comments yet. Be the first to start the discussion!</p>
+        {% endif %}
+
+        {% if current_user.is_authenticated %}
+        <div class="comment-form-wrapper">
+            <form method="POST" action="{{ url_for('snippets.comment_snippet', snippet_id=snippet.id) }}" novalidate>
+                {{ comment_form.hidden_tag() }}
+                <div class="form-group" style="margin-bottom: 0.75rem;">
+                    {{ comment_form.content(class="form-control", placeholder="Write a comment…", id="snippet-comment-content", style="min-height: 80px;") }}
+                    {% for error in comment_form.content.errors %}
+                        <small class="text-sm" style="color: var(--danger);">{{ error }}</small>
+                    {% endfor %}
+                </div>
+                {{ comment_form.submit(class="btn btn-primary", id="snippet-comment-submit") }}
+            </form>
+        </div>
+        {% else %}
+        <p class="text-sm text-muted"><a href="{{ url_for('auth.login') }}">Sign in</a> to join the discussion.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

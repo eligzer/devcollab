@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Activity Feed — DevCollab{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="projects-header">
+        <h1>📡 Activity Feed</h1>
+    </div>
+
+    {% if activities %}
+    <div class="activity-timeline">
+        {% for a in activities %}
+        <div class="activity-item animate-in" style="animation-delay: {{ loop.index0 * 0.04 }}s;">
+            <div class="activity-dot
+                {% if 'create' in a.action_type %}dot-create
+                {% elif 'edit' in a.action_type %}dot-edit
+                {% elif 'delete' in a.action_type %}dot-delete
+                {% elif 'comment' in a.action_type %}dot-comment
+                {% endif %}"></div>
+            <div class="activity-content">
+                <p class="activity-desc">{{ a.description }}</p>
+                <span class="activity-time">{{ a.created_at.strftime('%b %d, %Y %I:%M %p') }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state glass-card">
+        <p>No activity yet. Start creating, editing, and commenting to see the feed!</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

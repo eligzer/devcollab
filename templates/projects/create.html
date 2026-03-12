@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}New Project — DevCollab{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="form-wrapper glass-card animate-in">
+        <h2>Create a Project</h2>
+        <p class="form-subtitle">Start collaborating with your team</p>
+
+        <form method="POST" novalidate>
+            {{ form.hidden_tag() }}
+
+            <div class="form-group">
+                {{ form.name.label }}
+                {{ form.name(class="form-control", placeholder="My Awesome Project", id="project-name") }}
+                {% for error in form.name.errors %}
+                    <small class="text-sm" style="color: var(--danger);">{{ error }}</small>
+                {% endfor %}
+            </div>
+
+            <div class="form-group">
+                {{ form.description.label }}
+                {{ form.description(class="form-control", placeholder="Describe your project…", id="project-description") }}
+                {% for error in form.description.errors %}
+                    <small class="text-sm" style="color: var(--danger);">{{ error }}</small>
+                {% endfor %}
+            </div>
+
+            {{ form.submit(class="btn btn-primary btn-submit", id="project-submit") }}
+        </form>
+    </div>
+</div>
+{% endblock %}

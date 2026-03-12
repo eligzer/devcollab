@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Edit: {{ snippet.title }} — DevCollab{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="form-wrapper glass-card animate-in" style="max-width: 640px;">
+        <h2>Edit Snippet</h2>
+        <p class="form-subtitle">Updating <strong>{{ snippet.title }}</strong> in {{ snippet.project.name }}</p>
+
+        <form method="POST" novalidate>
+            {{ form.hidden_tag() }}
+
+            <div class="form-group">
+                {{ form.title.label }}
+                {{ form.title(class="form-control", placeholder="e.g. API endpoint handler", id="edit-snippet-title") }}
+                {% for error in form.title.errors %}
+                    <small class="text-sm" style="color: var(--danger);">{{ error }}</small>
+                {% endfor %}
+            </div>
+
+            <div class="form-group">
+                {{ form.language.label }}
+                {{ form.language(class="form-control", id="edit-snippet-language") }}
+            </div>
+
+            <div class="form-group">
+                {{ form.description.label }}
+                {{ form.description(class="form-control", placeholder="Brief description of this snippet…", id="edit-snippet-description") }}
+                {% for error in form.description.errors %}
+                    <small class="text-sm" style="color: var(--danger);">{{ error }}</small>
+                {% endfor %}
+            </div>
+
+            <div class="form-group">
+                {{ form.code.label }}
+                {{ form.code(class="form-control code-input", placeholder="Paste your code here…", id="edit-snippet-code") }}
+                {% for error in form.code.errors %}
+                    <small class="text-sm" style="color: var(--danger);">{{ error }}</small>
+                {% endfor %}
+            </div>
+
+            {{ form.submit(class="btn btn-primary btn-submit", id="edit-snippet-submit") }}
+        </form>
+
+        <div class="mt-2 text-center">
+            <a href="{{ url_for('snippets.detail', snippet_id=snippet.id) }}" class="text-sm text-muted">Cancel and go back</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
