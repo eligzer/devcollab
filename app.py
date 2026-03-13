@@ -1,29 +1,32 @@
 import os
-from flask_wtf.csrf import CSRFProtect
 from flask import Flask
 from flask_login import LoginManager
+from flask_wtf.csrf import CSRFProtect
+
 from config import Config
 from models import db, User
 
-login_manager = LoginManager()
-login_manager.login_view = 'auth.login'
-login_manager.login_message_category = 'info'
 
+login_manager = LoginManager()
+login_manager.login_view = "auth.login"
+login_manager.login_message_category = "info"
 
 
 def create_app():
     app = Flask(__name__)
 
-    # Load configuration first
+    # Load configuration
     app.config.from_object(Config)
-    
-    # Configure upload folder for profile pictures
-    upload_folder = os.path.join(app.root_path, 'static', 'profile_pics')
-    app.config['UPLOAD_FOLDER'] = upload_folder
-    os.makedirs(upload_folder, exist_ok=True)
+
+    # Configure upload folder
+    upload_folder = os.path.join(app.root_path, "static", "profile_pics")
+    app.config["UPLOAD_FOLDER"] = upload_folder
+
+    if not os.path.exists(upload_folder):
+        os.makedirs(upload_folder)
 
     # Security
-    csrf = CSRFProtect(app)
+    CSRFProtect(app)
 
     # Initialize extensions
     db.init_app(app)
@@ -33,6 +36,7 @@ def create_app():
     def load_user(user_id):
         return User.query.get(int(user_id))
 
+    # Register blueprints
     from routes.main import main_bp
     from routes.auth import auth_bp
     from routes.projects import projects_bp
@@ -51,35 +55,38 @@ def create_app():
     app.register_blueprint(admin_bp)
     app.register_blueprint(user_bp)
 
-    # Create database tables
+    # Database initialization
     with app.app_context():
         db.create_all()
-        
-        # Bootstrap Admin User
+
+        # Bootstrap admin user
         admin_exists = User.query.filter_by(is_admin=True).first()
+
         if not admin_exists:
-            import os
-            admin_username = os.environ.get('ADMIN_USERNAME', 'admin')
-            admin_password = os.environ.get('ADMIN_PASSWORD', 'admin123')
-            admin_email = os.environ.get('ADMIN_EMAIL', 'admin@example.com')
-            
-            new_admin = User(
+            admin_username = os.environ.get("ADMIN_USERNAME", "admin")
+            admin_password = os.environ.get("ADMIN_PASSWORD", "admin123")
+            admin_email = os.environ.get("ADMIN_EMAIL", "admin@example.com")
+
+            admin = User(
                 username=admin_username,
                 email=admin_email,
                 is_admin=True
             )
-            new_admin.set_password(admin_password)
-            db.session.add(new_admin)
+
+            admin.set_password(admin_password)
+
+            db.session.add(admin)
+
             try:
                 db.session.commit()
-                print(f"Bootstrapped default admin user: {admin_username}")
+                print(f"Admin user created: {admin_username}")
             except Exception as e:
                 db.session.rollback()
-                print(f"Error bootstrapping admin user: {e}")
+                print(f"Admin bootstrap error: {e}")
 
     return app
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app = create_app()
     app.run(debug=True)
