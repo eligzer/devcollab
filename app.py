@@ -13,20 +13,21 @@ from flask_limiter.util import get_remote_address
 # Rate limiter
 limiter = Limiter(key_func=get_remote_address)
 
+# Login manager
 login_manager = LoginManager()
 login_manager.login_view = "auth.login"
 login_manager.login_message_category = "info"
 
 
 def create_app():
-    app = Flask(__name__)
 
+    app = Flask(__name__)
     app.config.from_object(Config)
 
     # Upload folder
     upload_folder = os.path.join(app.root_path, "static", "profile_pics")
-    app.config["UPLOAD_FOLDER"] = upload_folder
     os.makedirs(upload_folder, exist_ok=True)
+    app.config["UPLOAD_FOLDER"] = upload_folder
 
     # Security
     CSRFProtect(app)
@@ -34,9 +35,10 @@ def create_app():
     # Initialize extensions
     db.init_app(app)
     login_manager.init_app(app)
-    socketio.init_app(app, cors_allowed_origins="*")
     limiter.init_app(app)
+    socketio.init_app(app, cors_allowed_origins="*")
 
+    # Flask-Login loader
     @login_manager.user_loader
     def load_user(user_id):
         return User.query.get(int(user_id))
@@ -65,9 +67,10 @@ def create_app():
     app.register_blueprint(messages_bp)
     app.register_blueprint(ai_bp)
 
-    # Notification injector
+    # Notification count injector
     @app.context_processor
     def inject_notifications():
+
         if current_user.is_authenticated:
             from models import Notification
 
@@ -86,15 +89,17 @@ def create_app():
     # Database initialization
     with app.app_context():
         try:
+
             db.create_all()
 
             admin_username = os.environ.get("ADMIN_USERNAME", "admin")
             admin_password = os.environ.get("ADMIN_PASSWORD", "elixer")
-            admin_email = os.environ.get("ADMIN_EMAIL", "eligzerr@gmail.com")
+            admin_email = os.environ.get("ADMIN_EMAIL", "admin@example.com")
 
             admin = User.query.filter_by(username=admin_username).first()
 
             if admin is None:
+
                 admin = User(
                     username=admin_username,
                     email=admin_email,
@@ -105,19 +110,22 @@ def create_app():
                 db.session.add(admin)
                 db.session.commit()
 
-                print("Admin created")
+                print("Admin user created")
 
             else:
+
                 admin.set_password(admin_password)
                 db.session.commit()
 
                 print("Admin password synced")
 
         except Exception as e:
+
             db.session.rollback()
             print("Database initialization error:", e)
 
     return app
 
 
+# Create app instance for Gunicorn
 app = create_app()
