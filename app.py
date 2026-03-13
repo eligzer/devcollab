@@ -100,9 +100,12 @@ def create_app():
     import events
 
     # Database initialization
-    with app.app_context():
 
+with app.app_context():
+
+    try:
         db.create_all()
+        print("Database tables ensured.")
 
         admin_username = os.environ.get("ADMIN_USERNAME", "admin")
         admin_password = os.environ.get("ADMIN_PASSWORD", "elixer")
@@ -110,7 +113,7 @@ def create_app():
 
         admin = User.query.filter_by(username=admin_username).first()
 
-        if not admin:
+        if admin is None:
             admin = User(
                 username=admin_username,
                 email=admin_email,
@@ -119,25 +122,20 @@ def create_app():
 
             admin.set_password(admin_password)
             db.session.add(admin)
+            db.session.commit()
 
-            try:
-                db.session.commit()
-                print("Admin created")
-            except Exception as e:
-                db.session.rollback()
-                print("Admin creation failed:", e)
+            print("Admin user created successfully.")
 
         else:
+            # Sync admin password with environment variable
             admin.set_password(admin_password)
+            db.session.commit()
 
-            try:
-                db.session.commit()
-                print("Admin password synced")
-            except Exception as e:
-                db.session.rollback()
-                print("Admin update failed:", e)
+            print("Admin password synced with environment variable.")
 
-    return app
+    except Exception as e:
+        db.session.rollback()
+        print("Database initialization error:", e)
 
 
 # Run server
