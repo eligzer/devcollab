@@ -17,7 +17,7 @@
             <h3>{{ note.title }}</h3>
             <p>{{ note.content[:150] }}{% if note.content|length > 150 %}…{% endif %}</p>
             <div class="project-meta">
-                <span>👤 {{ note.created_by }}</span>
+                <span>👤 <a href="{{ url_for('user.profile', username=note.created_by) }}">{{ note.created_by }}</a></span>
                 <span>📅 {{ note.updated_at.strftime('%b %d, %Y %I:%M %p') }}</span>
             </div>
         </a>

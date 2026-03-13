@@ -1,4 +1,5 @@
 from flask_wtf import FlaskForm
+from flask_wtf.file import FileField, FileAllowed
 from wtforms import StringField, PasswordField, TextAreaField, SelectField, SubmitField, IntegerField
 from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationError, NumberRange
 from models import User, InviteCode
@@ -75,3 +76,27 @@ class CommentForm(FlaskForm):
 class InviteCodeForm(FlaskForm):
     count = IntegerField('Number of Codes', validators=[DataRequired(), NumberRange(min=1, max=50)], default=1)
     submit = SubmitField('Generate Codes')
+
+
+class EditProfileForm(FlaskForm):
+    username = StringField('Username', validators=[DataRequired(), Length(min=3, max=80)])
+    bio = TextAreaField('About Me', validators=[Length(max=500)])
+    profile_image = FileField('Update Profile Picture', validators=[
+        FileAllowed(['jpg', 'jpeg', 'png'], 'Images only (jpg, jpeg, png).')
+    ])
+    submit = SubmitField('Update Profile')
+
+    def __init__(self, original_username, *args, **kwargs):
+        super(EditProfileForm, self).__init__(*args, **kwargs)
+        self.original_username = original_username
+
+    def validate_username(self, field):
+        if field.data != self.original_username:
+            user = User.query.filter_by(username=field.data).first()
+            if user:
+                raise ValidationError('Please use a different username.')
+
+
+class SearchForm(FlaskForm):
+    q = StringField('Search', validators=[DataRequired()])
+    submit = SubmitField('Search')

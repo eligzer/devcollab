@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}DevCollab - Search Results{% endblock %}
+
+{% block content %}
+<div class="header-section" style="margin-bottom: 20px;">
+    <h2>Search Results for "{{ query }}"</h2>
+</div>
+
+{% if notes %}
+<div class="card-grid">
+    {% for note in notes %}
+    <div class="card">
+        <h3><a href="{{ url_for('notes.detail', note_id=note.id) }}">{{ note.title }}</a></h3>
+        <div class="meta">
+            By <a href="{{ url_for('user.profile', username=note.created_by) }}">{{ note.created_by }}</a> | Last updated: {{ note.updated_at.strftime('%Y-%m-%d %H:%M:%S') }}
+        </div>
+        <div class="preview" style="margin-top: 10px;">
+            {{ note.content[:200] }}{% if note.content|length > 200 %}...{% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <p>No notes found matching your layout.</p>
+</div>
+{% endif %}
+{% endblock %}

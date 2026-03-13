@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}DevCollab - Edit Profile{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h2>Edit Profile</h2>
+    
+    <form method="POST" action="{{ url_for('user.edit_profile') }}" enctype="multipart/form-data">
+        {{ form.hidden_tag() }}
+        
+        <div class="form-group" style="margin-bottom: 20px;">
+            <label style="display: block; margin-bottom: 10px;">Current Profile Picture</label>
+            <img src="{{ url_for('static', filename='profile_pics/' + (current_user.profile_image or 'default.jpg')) }}" alt="Current Profile" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; margin-bottom: 15px;">
+        </div>
+
+        <div class="form-group">
+            {{ form.profile_image.label }}
+            {{ form.profile_image(class="form-control", style="margin-top: 5px;") }}
+            {% if form.profile_image.errors %}
+                <ul class="errors">
+                    {% for error in form.profile_image.errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        </div>
+        
+        <div class="form-group">
+            {{ form.username.label }}
+            {{ form.username(class="form-control") }}
+            {% if form.username.errors %}
+                <ul class="errors">
+                    {% for error in form.username.errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        </div>
+        
+        <div class="form-group">
+            {{ form.bio.label }}
+            {{ form.bio(class="form-control", rows=5) }}
+            {% if form.bio.errors %}
+                <ul class="errors">
+                    {% for error in form.bio.errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        </div>
+        
+        <div class="form-group">
+            {{ form.submit(class="btn btn-primary") }}
+            <a href="{{ url_for('user.profile', username=current_user.username) }}" class="btn btn-secondary" style="margin-left: 10px;">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}DevCollab - {{ user.username }}'s Profile{% endblock %}
+
+{% block content %}
+<div class="user-profile">
+    <div class="profile-header" style="display: flex; align-items: center; margin-bottom: 2rem;">
+        <img src="{{ url_for('static', filename='profile_pics/' + (user.profile_image or 'default.jpg')) }}" alt="{{ user.username }} Profile Picture" style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover; margin-right: 2rem;">
+        <div>
+            <h1>{{ user.username }}</h1>
+            <p class="text-muted" style="color: #888;">Joined {{ user.created_at.strftime('%B %Y') }}</p>
+            {% if user.bio %}
+                <p style="margin-top: 10px;">{{ user.bio }}</p>
+            {% else %}
+                <p style="color: #666; font-style: italic; margin-top: 10px;">User hasn't added a bio yet.</p>
+            {% endif %}
+            
+            {% if current_user.is_authenticated and current_user.id == user.id %}
+                <a href="{{ url_for('user.edit_profile') }}" class="btn" style="display:inline-block; margin-top: 10px;">Edit Profile</a>
+            {% endif %}
+        </div>
+    </div>
+    
+    <h3>Notes by {{ user.username }}</h3>
+    {% if notes %}
+        <div class="card-grid">
+            {% for note in notes %}
+            <div class="card">
+                <h3><a href="{{ url_for('notes.detail', note_id=note.id) }}">{{ note.title }}</a></h3>
+                <div class="meta">
+                    Last updated: {{ note.updated_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                </div>
+                <div class="preview">
+                    {{ note.content[:150] }}{% if note.content|length > 150 %}...{% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>No notes published yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

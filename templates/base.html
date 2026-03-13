@@ -17,12 +17,29 @@
                 <li><a href="{{ url_for('projects.list_projects') }}">Projects</a></li>
                 <li><a href="{{ url_for('notes.list_notes') }}">Class Notebook</a></li>
                 <li><a href="{{ url_for('activity.feed') }}">Activity</a></li>
+                
+                <!-- Search Bar -->
+                <li>
+                    <form action="{{ url_for('notes.search_notes') }}" method="get" class="search-form" style="display:inline-block; margin: 0 10px;">
+                        <input type="text" name="q" placeholder="Search notes..." value="{{ request.args.get('q', '') }}" style="padding: 5px; border-radius: 4px; border: 1px solid #ccc; background-color:#333; color:white;">
+                        <button type="submit" style="padding: 5px 10px; background-color:#4a90e2; color:white; border:none; border-radius: 4px; cursor:pointer;">Search</button>
+                    </form>
+                </li>
+                
                 {% if current_user.is_authenticated %}
                     <li><a href="{{ url_for('projects.create_project') }}">New Project</a></li>
                     {% if current_user.is_admin %}
                         <li><a href="{{ url_for('admin.invite_codes') }}">Admin</a></li>
                     {% endif %}
-                    <li><a href="{{ url_for('auth.logout') }}">Sign Out ({{ current_user.username }})</a></li>
+                    <li class="nav-item dropdown">
+                        <img src="{{ url_for('static', filename='profile_pics/' + (current_user.profile_image or 'default.jpg')) }}" alt="Profile Picture" style="width: 30px; height: 30px; border-radius: 50%; vertical-align: middle; margin-right: 5px; cursor: pointer; object-fit: cover;">
+                        <a href="#" style="vertical-align: middle;">{{ current_user.username }}</a>
+                        <div class="dropdown-content" style="display: none; position: absolute; background-color: #222; min-width: 160px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2); z-index: 1;">
+                            <a href="{{ url_for('user.profile', username=current_user.username) }}" style="color: white; padding: 12px 16px; text-decoration: none; display: block;">Profile</a>
+                            <a href="{{ url_for('user.edit_profile') }}" style="color: white; padding: 12px 16px; text-decoration: none; display: block;">Edit Profile</a>
+                            <a href="{{ url_for('auth.logout') }}" style="color: white; padding: 12px 16px; text-decoration: none; display: block;">Sign Out</a>
+                        </div>
+                    </li>
                 {% else %}
                     <li><a href="{{ url_for('auth.login') }}">Sign In</a></li>
                     <li><a href="{{ url_for('auth.register') }}" class="nav-cta">Get Started</a></li>
@@ -53,5 +70,25 @@
     </footer>
 
     {% block extra_scripts %}{% endblock %}
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const userDropdown = document.querySelector('.nav-item.dropdown');
+            if (userDropdown) {
+                userDropdown.addEventListener('click', function(e) {
+                    const content = this.querySelector('.dropdown-content');
+                    content.style.display = content.style.display === 'block' ? 'none' : 'block';
+                    e.stopPropagation();
+                });
+                
+                document.addEventListener('click', function(e) {
+                    const content = userDropdown.querySelector('.dropdown-content');
+                    if(content && content.style.display === 'block') {
+                        content.style.display = 'none';
+                    }
+                });
+            }
+        });
+    </script>
 </body>
 </html>

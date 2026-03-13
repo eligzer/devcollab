@@ -1,8 +1,9 @@
 from datetime import datetime, timezone
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
-from models import db, ClassNote, ClassNoteHistory, Comment
-from forms import ClassNoteForm, CommentForm
+from sqlalchemy import or_
+from models import db, ClassNote, ClassNoteHistory, Comment, NoteLike
+from forms import ClassNoteForm, CommentForm, SearchForm
 from utils import log_activity
 
 notes_bp = Blueprint('notes', __name__, url_prefix='/notes')
@@ -11,7 +12,26 @@ notes_bp = Blueprint('notes', __name__, url_prefix='/notes')
 @notes_bp.route('/')
 def list_notes():
     notes = ClassNote.query.order_by(ClassNote.updated_at.desc()).all()
+    # Need an empty SearchForm for the list page if no global search bar is present without it
+    # But usually global search is handled by navbar form pointing to /notes/search
     return render_template('notes/list.html', notes=notes)
+
+
+@notes_bp.route('/search')
+def search_notes():
+    query = request.args.get('q', '')
+    if query:
+        search_filter = f"%{query}%"
+        notes = ClassNote.query.filter(
+            or_(
+                ClassNote.title.ilike(search_filter),
+                ClassNote.content.ilike(search_filter)
+            )
+        ).order_by(ClassNote.updated_at.desc()).all()
+    else:
+        notes = []
+    
+    return render_template('notes/search_results.html', notes=notes, query=query)
 
 
 @notes_bp.route('/new', methods=['GET', 'POST'])
@@ -132,3 +152,24 @@ def comment_note(note_id):
         db.session.commit()
         flash('Comment posted!', 'success')
     return redirect(url_for('notes.detail', note_id=note.id))
+
+
+@notes_bp.route('/<int:note_id>/like', methods=['POST'])
+@login_required
+def toggle_like(note_id):
+    note = ClassNote.query.get_or_404(note_id)
+    
+    existing_like = NoteLike.query.filter_by(user_id=current_user.id, note_id=note.id).first()
+    
+    if existing_like:
+        db.session.delete(existing_like)
+        db.session.commit()
+        # Optionally log unlike activity here, or just let users silently toggle.
+    else:
+        new_like = NoteLike(user_id=current_user.id, note_id=note.id)
+        db.session.add(new_like)
+        db.session.commit()
+        log_activity(current_user.id, 'like_note', 'note', note.id,
+                     f'{current_user.username} liked the Class Note "{note.title}"')
+                     
+    return redirect(request.referrer or url_for('notes.detail', note_id=note.id))

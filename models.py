@@ -14,12 +14,14 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(256), nullable=False)
     bio = db.Column(db.Text, default='')
+    profile_image = db.Column(db.String(120), default='default.jpg')
     is_admin = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     projects = db.relationship('Project', backref='owner', lazy='dynamic')
     snippets = db.relationship('CodeSnippet', backref='author', lazy='dynamic')
     comments = db.relationship('Comment', backref='author', lazy='dynamic')
+    note_likes = db.relationship('NoteLike', backref='user', lazy='dynamic', cascade='all, delete-orphan')
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -84,6 +86,7 @@ class ClassNote(db.Model):
     comments = db.relationship('Comment', backref='class_note', lazy='dynamic',
                                primaryjoin='Comment.note_id == ClassNote.id',
                                cascade='all, delete-orphan')
+    likes = db.relationship('NoteLike', backref='note', lazy='dynamic', cascade='all, delete-orphan')
 
     def __repr__(self):
         return f'<ClassNote {self.title}>'
@@ -147,4 +150,16 @@ class InviteCode(db.Model):
 
     def __repr__(self):
         return f'<InviteCode {self.code}>'
+
+
+class NoteLike(db.Model):
+    __tablename__ = 'note_likes'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    note_id = db.Column(db.Integer, db.ForeignKey('class_notes.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    def __repr__(self):
+        return f'<NoteLike user={self.user_id} note={self.note_id}>'
 

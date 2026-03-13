@@ -9,11 +9,18 @@ login_manager.login_view = 'auth.login'
 login_manager.login_message_category = 'info'
 
 
+import os
+
 def create_app():
     app = Flask(__name__)
 
     # Load configuration first
     app.config.from_object(Config)
+    
+    # Configure upload folder for profile pictures
+    upload_folder = os.path.join(app.root_path, 'static', 'profile_pics')
+    app.config['UPLOAD_FOLDER'] = upload_folder
+    os.makedirs(upload_folder, exist_ok=True)
 
     # Security
     csrf = CSRFProtect(app)
@@ -26,7 +33,6 @@ def create_app():
     def load_user(user_id):
         return User.query.get(int(user_id))
 
-    # Register blueprints
     from routes.main import main_bp
     from routes.auth import auth_bp
     from routes.projects import projects_bp
@@ -34,6 +40,7 @@ def create_app():
     from routes.notes import notes_bp
     from routes.activity import activity_bp
     from routes.admin import admin_bp
+    from routes.user import user_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp)
@@ -42,6 +49,7 @@ def create_app():
     app.register_blueprint(notes_bp)
     app.register_blueprint(activity_bp)
     app.register_blueprint(admin_bp)
+    app.register_blueprint(user_bp)
 
     # Create database tables
     with app.app_context():
