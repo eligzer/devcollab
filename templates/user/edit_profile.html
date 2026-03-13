@@ -51,6 +51,18 @@
         </div>
         
         <div class="form-group">
+            {{ form.github_link.label }}
+            {{ form.github_link(class="form-control", placeholder="https://github.com/username") }}
+            {% if form.github_link.errors %}
+                <ul class="errors">
+                    {% for error in form.github_link.errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        </div>
+        
+        <div class="form-group">
             {{ form.submit(class="btn btn-primary") }}
             <a href="{{ url_for('user.profile', username=current_user.username) }}" class="btn btn-secondary" style="margin-left: 10px;">Cancel</a>
         </div>

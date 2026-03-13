@@ -36,7 +36,7 @@
                         <a href="#" style="vertical-align: middle;">{{ current_user.username }}</a>
                         <div class="dropdown-content" style="display: none; position: absolute; background-color: #222; min-width: 160px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2); z-index: 1;">
                             <a href="{{ url_for('user.profile', username=current_user.username) }}" style="color: white; padding: 12px 16px; text-decoration: none; display: block;">Profile</a>
-                            <a href="{{ url_for('user.edit_profile') }}" style="color: white; padding: 12px 16px; text-decoration: none; display: block;">Edit Profile</a>
+                            <a href="{{ url_for('user.edit_profile') }}" style="color: white; padding: 12px 16px; text-decoration: none; display: block;">Settings</a>
                             <a href="{{ url_for('auth.logout') }}" style="color: white; padding: 12px 16px; text-decoration: none; display: block;">Sign Out</a>
                         </div>
                     </li>

@@ -81,6 +81,7 @@ class InviteCodeForm(FlaskForm):
 class EditProfileForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired(), Length(min=3, max=80)])
     bio = TextAreaField('About Me', validators=[Length(max=500)])
+    github_link = StringField('GitHub Profile Link', validators=[Length(max=200)])
     profile_image = FileField('Update Profile Picture', validators=[
         FileAllowed(['jpg', 'jpeg', 'png'], 'Images only (jpg, jpeg, png).')
     ])

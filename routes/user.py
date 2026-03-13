@@ -33,6 +33,7 @@ def edit_profile():
         
         current_user.username = form.username.data
         current_user.bio = form.bio.data
+        current_user.github_link = form.github_link.data
         db.session.commit()
         
         log_activity(current_user.id, 'update_profile', 'user', current_user.id,
@@ -44,5 +45,6 @@ def edit_profile():
     elif request.method == 'GET':
         form.username.data = current_user.username
         form.bio.data = current_user.bio
+        form.github_link.data = current_user.github_link
         
     return render_template('user/edit_profile.html', form=form)

@@ -14,6 +14,7 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(256), nullable=False)
     bio = db.Column(db.Text, default='')
+    github_link = db.Column(db.String(200), default='')
     profile_image = db.Column(db.String(120), default='default.jpg')
     is_admin = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
