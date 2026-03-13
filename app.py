@@ -46,6 +46,28 @@ def create_app():
     # Create database tables
     with app.app_context():
         db.create_all()
+        
+        # Bootstrap Admin User
+        admin_exists = User.query.filter_by(is_admin=True).first()
+        if not admin_exists:
+            import os
+            admin_username = os.environ.get('ADMIN_USERNAME', 'admin')
+            admin_password = os.environ.get('ADMIN_PASSWORD', 'admin123')
+            admin_email = os.environ.get('ADMIN_EMAIL', 'admin@example.com')
+            
+            new_admin = User(
+                username=admin_username,
+                email=admin_email,
+                is_admin=True
+            )
+            new_admin.set_password(admin_password)
+            db.session.add(new_admin)
+            try:
+                db.session.commit()
+                print(f"Bootstrapped default admin user: {admin_username}")
+            except Exception as e:
+                db.session.rollback()
+                print(f"Error bootstrapping admin user: {e}")
 
     return app
 

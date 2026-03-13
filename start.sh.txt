@@ -1,1 +1,2 @@
-gunicorn "app:create_app()"
+python reset_admin.py
+gunicorn app:app
