@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Notifications — DevCollab{% endblock %}
+
+{% block content %}
+<div class="container animate-in">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <h1>🔔 Notifications</h1>
+        {% if notifications and unread_notifications_count > 0 %}
+        <form method="POST" action="{{ url_for('user.read_all_notifications') }}" style="display:inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-outline" style="font-size: 0.9rem; padding: 6px 12px;">Mark all as read</button>
+        </form>
+        {% endif %}
+    </div>
+
+    {% if notifications %}
+    <div class="notifications-list" style="display: flex; flex-direction: column; gap: 1rem;">
+        {% for notif in notifications %}
+            <div class="notification-card {% if not notif.is_read %}unread{% endif %}" style="padding: 1.5rem; background: var(--bg-card); border-radius: 8px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; transition: background 0.2s ease;">
+                <div style="display: flex; flex-direction: column; gap: 0.5rem; flex: 1;">
+                    <span class="notif-message {% if not notif.is_read %}unread-text{% else %}read-text{% endif %}" style="font-size: 1.05rem;">
+                        {{ notif.message }}
+                    </span>
+                    <span style="font-size: 0.85rem; color: var(--text-muted);">{{ notif.created_at.strftime('%b %d, %Y %I:%M %p') }}</span>
+                </div>
+                {% if not notif.is_read %}
+                <form method="POST" action="{{ url_for('user.read_notification', notif_id=notif.id) }}" style="display:inline; margin-left: 1rem;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-primary" style="padding: 4px 8px; font-size: 0.8rem; border-radius: 20px;">Mark Read</button>
+                </form>
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
+    {% else %}
+        <div class="glass-card" style="text-align: center; padding: 3rem;">
+            <p class="text-muted" style="font-size: 1.1rem;">You don't have any notifications yet.</p>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+.notification-card.unread {
+    background: rgba(74, 144, 226, 0.1) !important;
+    border-color: rgba(74, 144, 226, 0.3) !important;
+}
+.notif-message.unread-text {
+    color: var(--text-main);
+    font-weight: bold;
+}
+.notif-message.read-text {
+    color: var(--text-muted);
+    font-weight: normal;
+}
+</style>
+{% endblock %}

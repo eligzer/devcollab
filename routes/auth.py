@@ -38,6 +38,10 @@ def login():
     if form.validate_on_submit():
         user = User.query.filter_by(username=form.username.data).first()
         if user and user.check_password(form.password.data):
+            if not user.is_active:
+                flash('Your account has been suspended. Please contact an administrator.', 'danger')
+                return redirect(url_for('auth.login'))
+                
             login_user(user)
             flash('Welcome back!', 'success')
             next_page = request.args.get('next')

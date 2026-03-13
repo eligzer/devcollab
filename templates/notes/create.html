@@ -1,9 +1,71 @@
 {% extends "base.html" %}
 {% block title %}New Note — DevCollab{% endblock %}
 
+{% block extra_head %}
+<!-- EasyMDE -->
+<link rel="stylesheet" href="https://unpkg.com/easymde/dist/easymde.min.css">
+<style>
+/* AI Sidebar Styles */
+.ai-sidebar {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 15px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+.ai-header {
+    font-weight: bold;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 10px;
+}
+.ai-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-bottom: 15px;
+    border-bottom: 1px dashed var(--border-color);
+}
+.ai-section:last-child {
+    border-bottom: none;
+}
+.ai-result-box {
+    background: var(--bg-hover);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 10px;
+    font-size: 0.85rem;
+    overflow-y: auto;
+    max-height: 200px;
+    display: none;
+}
+.ai-loader {
+    display: none;
+    font-size: 0.85rem;
+    color: var(--accent);
+    align-items: center;
+    gap: 6px;
+}
+.ai-loader::after {
+    content: "⏳";
+    animation: rotate 1.5s linear infinite;
+}
+@keyframes rotate { 100% { transform: rotate(360deg); } }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container">
-    <div class="form-wrapper glass-card animate-in" style="max-width: 640px;">
+<div class="container" style="max-width: 1200px; display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
+    
+    <!-- Left Column: Editor -->
+    <div>
+        <div class="form-wrapper glass-card animate-in" style="max-width: 100%;">
         <h2>Create a Note</h2>
         <p class="form-subtitle">Share class notes, lab experiments, or study materials</p>
 
@@ -29,5 +91,263 @@
             {{ form.submit(class="btn btn-primary btn-submit", id="note-submit") }}
         </form>
     </div>
-</div>
+    </div> <!-- End Left Column -->
+
+    <!-- Right Column: AI Assistant Sidebar -->
+    <div class="ai-sidebar animate-in">
+        <div class="ai-header">
+            ✨ AI Assistant
+        </div>
+        
+        <!-- 1. Generate Notes -->
+        <div class="ai-section">
+            <span class="text-sm font-weight-bold">Generate Notes</span>
+            <input type="text" id="ai-topic-input" class="form-control" placeholder="e.g., CPU Scheduling Algorithms" style="font-size: 0.85rem; padding: 6px 10px;">
+            <button class="btn btn-primary" id="btn-ai-generate" style="font-size: 0.85rem; padding: 6px;">📝 Generate Notes</button>
+            <div id="loader-generate" class="ai-loader">Generating...</div>
+        </div>
+        
+        <!-- 2. Contextual Actions -->
+        <div class="ai-section">
+            <span class="text-sm font-weight-bold">Document Actions</span>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="btn btn-outline" id="btn-ai-summarize" style="font-size: 0.8rem; padding: 5px 10px; flex: 1;">📑 Summarize Note</button>
+                <button class="btn btn-outline" id="btn-ai-questions" style="font-size: 0.8rem; padding: 5px 10px; flex: 1;">❓ Practice Questions</button>
+            </div>
+            
+            <span class="text-sm font-weight-bold mt-2">Selection Actions <span style="font-weight: normal; color: var(--text-muted);">(Highlight text first)</span></span>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="btn btn-outline" id="btn-ai-explain" style="font-size: 0.8rem; padding: 5px 10px; flex: 1;">💡 Explain Text</button>
+                <button class="btn btn-outline" id="btn-ai-explain-code" style="font-size: 0.8rem; padding: 5px 10px; flex: 1;">💻 Explain Code</button>
+            </div>
+            <div id="loader-context" class="ai-loader">Processing...</div>
+            <div id="ai-context-result" class="ai-result-box"></div>
+        </div>
+
+        <!-- 3. Conversational Chat -->
+        <div class="ai-section" style="flex-grow: 1; border-bottom: none;">
+            <span class="text-sm font-weight-bold">Ask Questions</span>
+            <div id="ai-chat-history" class="ai-result-box" style="display: block; flex-grow: 1; min-height: 100px; margin-bottom: 8px;">
+                <div class="text-muted" style="font-style: italic;">Ask me anything about this note.</div>
+            </div>
+            <div style="display: flex; gap: 5px;">
+                <input type="text" id="ai-chat-input" class="form-control" placeholder="Explain paging..." style="font-size: 0.85rem; padding: 6px 10px;">
+                <button class="btn btn-primary" id="btn-ai-chat" style="font-size: 0.85rem; padding: 6px;">Send</button>
+            </div>
+            <div id="loader-chat" class="ai-loader">Thinking...</div>
+        </div>
+    </div> <!-- End Right Column -->
+
+</div> <!-- End Grid Container -->
+
+<script src="https://unpkg.com/easymde/dist/easymde.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const contentArea = document.getElementById('note-content');
+    
+    // Initialize EasyMDE for Create page
+    const easymde = new EasyMDE({
+        element: contentArea,
+        spellChecker: false,
+        autosave: { enabled: false },
+        status: ["lines", "words", "cursor"],
+        minHeight: "400px",
+        promptURLs: true
+    });
+
+    
+    function uploadImage(file) {
+        if (!file.type.startsWith('image/')) return;
+        
+        const placeholder = '\n![Uploading image...]()\n';
+        const cm = easymde.codemirror;
+        cm.replaceSelection(placeholder);
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('csrf_token', '{{ csrf_token() }}');
+
+        fetch("{{ url_for('notes.upload_image') }}", {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': '{{ csrf_token() }}'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            const currentVal = cm.getValue();
+            if (data.url) {
+                cm.setValue(currentVal.replace('![Uploading image...]()', `![Image](${data.url})`));
+            } else {
+                alert(data.error || 'Upload failed');
+                cm.setValue(currentVal.replace('![Uploading image...]()', ''));
+            }
+        })
+        .catch(error => {
+            alert('Upload error');
+            const currentVal = cm.getValue();
+            cm.setValue(currentVal.replace('![Uploading image...]()', ''));
+        });
+    }
+
+    easymde.codemirror.on('paste', function(cm, e) {
+        const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+        for (let index in items) {
+            const item = items[index];
+            if (item.kind === 'file') {
+                const blob = item.getAsFile();
+                uploadImage(blob);
+            }
+        }
+    });
+
+    easymde.codemirror.on('drop', function(cm, e) {
+        e.preventDefault();
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            uploadImage(files[0]);
+        }
+    });
+    
+    // sync content on submit
+    document.getElementById('note-submit').addEventListener('click', function() {
+        contentArea.value = easymde.value();
+    });
+
+    // --- AI Assistant Logic ---
+    const csrfToken = "{{ csrf_token() }}";
+    
+    // Helper to run AI Requests
+    async function runAiRequest(endpoint, payload, loaderId, resultBoxId, onSuccess) {
+        const loader = document.getElementById(loaderId);
+        const resultBox = resultBoxId ? document.getElementById(resultBoxId) : null;
+        
+        loader.style.display = 'flex';
+        if(resultBox) {
+            resultBox.style.display = 'none';
+            resultBox.innerHTML = '';
+        }
+        
+        try {
+            const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            
+            loader.style.display = 'none';
+            
+            if (!res.ok) {
+                alert(data.error || 'Something went wrong.');
+                return;
+            }
+            
+            if (onSuccess) onSuccess(data.result);
+            else if (resultBox) {
+                // simple render
+                resultBox.style.display = 'block';
+                let formatted = data.result.replace(/\ng/, '<br>');
+                formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                resultBox.innerHTML = formatted;
+            }
+            
+        } catch(e) {
+            loader.style.display = 'none';
+            alert("Network error processing AI request.");
+        }
+    }
+
+    // 1. Generate Notes
+    document.getElementById('btn-ai-generate').addEventListener('click', (e) => {
+        e.preventDefault();
+        const topic = document.getElementById('ai-topic-input').value.trim();
+        if (!topic) return alert('Please enter a topic.');
+        
+        runAiRequest('{{ url_for("ai.api_generate") }}', { topic: topic }, 'loader-generate', null, (result) => {
+            const cm = easymde.codemirror;
+            const currentVal = cm.getValue();
+            const newVal = currentVal + (currentVal ? '\n\n' : '') + result;
+            cm.setValue(newVal);
+            document.getElementById('ai-topic-input').value = '';
+        });
+    });
+
+    // 2. Action Helpers
+    const ctxResult = document.getElementById('ai-context-result');
+    
+    document.getElementById('btn-ai-summarize').addEventListener('click', (e) => {
+        e.preventDefault();
+        const content = easymde.value();
+        if (!content.trim()) return alert("Editor is empty.");
+        runAiRequest('{{ url_for("ai.api_summarize") }}', { content: content }, 'loader-context', 'ai-context-result');
+    });
+
+    document.getElementById('btn-ai-questions').addEventListener('click', (e) => {
+        e.preventDefault();
+        const content = easymde.value();
+        if (!content.trim()) return alert("Editor is empty.");
+        runAiRequest('{{ url_for("ai.api_questions") }}', { content: content }, 'loader-context', 'ai-context-result', (result) => {
+            ctxResult.style.display = 'block';
+            const mapped = result.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            ctxResult.innerHTML = mapped + `<br><br><button class="btn btn-sm btn-outline mt-2" onclick="easymde.codemirror.setValue(easymde.value() + '\\n\\n' + this.getAttribute('data-raw'))" data-raw="${encodeURIComponent(result)}">Insert into note</button>`;
+        });
+    });
+
+    ctxResult.addEventListener('click', (e) => {
+        if(e.target.tagName === 'BUTTON' && e.target.hasAttribute('data-raw')) {
+            e.preventDefault();
+            const raw = decodeURIComponent(e.target.getAttribute('data-raw'));
+            easymde.codemirror.setValue(easymde.value() + "\n\n" + raw);
+        }
+    });
+
+    document.getElementById('btn-ai-explain').addEventListener('click', (e) => {
+        e.preventDefault();
+        const text = easymde.codemirror.getSelection();
+        if(!text) return alert("Please highlight text in the editor first.");
+        runAiRequest('{{ url_for("ai.api_explain") }}', { text: text, is_code: false }, 'loader-context', 'ai-context-result');
+    });
+
+    document.getElementById('btn-ai-explain-code').addEventListener('click', (e) => {
+        e.preventDefault();
+        const text = easymde.codemirror.getSelection();
+        if(!text) return alert("Please highlight code snippet in the editor first.");
+        runAiRequest('{{ url_for("ai.api_explain") }}', { text: text, is_code: true }, 'loader-context', 'ai-context-result');
+    });
+
+    // 3. Chat Logic
+    document.getElementById('btn-ai-chat').addEventListener('click', (e) => {
+        e.preventDefault();
+        const inputField = document.getElementById('ai-chat-input');
+        const query = inputField.value.trim();
+        const content = easymde.value();
+        const historyBox = document.getElementById('ai-chat-history');
+        
+        if (!query) return;
+        
+        historyBox.innerHTML += `<div style="margin-bottom: 8px;"><b>You:</b> ${query}</div>`;
+        historyBox.scrollTop = historyBox.scrollHeight;
+        inputField.value = '';
+        
+        runAiRequest('{{ url_for("ai.api_chat") }}', { query: query, context: content }, 'loader-chat', null, (result) => {
+             const mapped = result.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+             historyBox.innerHTML += `<div style="margin-bottom: 12px; color: var(--accent-secondary);"><b>AI:</b> ${mapped}</div>`;
+             historyBox.scrollTop = historyBox.scrollHeight;
+        });
+    });
+
+    document.getElementById('ai-chat-input').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            document.getElementById('btn-ai-chat').click();
+        }
+    });
+
+});
+</script>
 {% endblock %}

@@ -5,8 +5,11 @@
 <div class="container">
     <div class="snippet-detail-header animate-in">
         <h1>📓 {{ note.title }}</h1>
-        <div class="snippet-detail-meta">
-            <span>Created by <strong>{{ note.created_by }}</strong></span>
+        <div class="snippet-detail-meta" style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+            <span style="display: flex; align-items: center; gap: 0.5rem;">
+                <!-- Try to get user via context or rely on string match in app if needed... wait, created_by is just a string, we might need a template function or we can add it later. For now, we will add avatar where author object exists. -->
+                Created by <strong>{{ note.created_by }}</strong>
+            </span>
             <span>📅 {{ note.created_at.strftime('%B %d, %Y %I:%M %p') }}</span>
         </div>
         {% if last_edit %}
@@ -18,8 +21,26 @@
 
     <div class="glass-card animate-in" style="animation-delay: 0.1s; white-space: pre-wrap; line-height: 1.8; font-size: 0.95rem;">{{ note.content }}</div>
 
-    <div class="mt-3" style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+    <div class="mt-3" style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
         <a href="{{ url_for('notes.list_notes') }}" class="btn btn-outline">← All Notes</a>
+        
+        {% set user_liked = false %}
+        {% if current_user.is_authenticated %}
+            {% for like in note.likes %}
+                {% if like.user_id == current_user.id %}
+                    {% set user_liked = true %}
+                {% endif %}
+            {% endfor %}
+            <form method="POST" action="{{ url_for('notes.toggle_like', note_id=note.id) }}" style="display:inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn {% if user_liked %}btn-primary{% else %}btn-outline{% endif %}">
+                    {% if user_liked %}❤️ Liked{% else %}🤍 Like{% endif %} ({{ note.likes.count() }})
+                </button>
+            </form>
+        {% else %}
+            <span class="btn btn-outline" style="cursor: default;">❤️ {{ note.likes.count() }} Likes</span>
+        {% endif %}
+
         {% if current_user.is_authenticated %}
             <a href="{{ url_for('notes.edit_note', note_id=note.id) }}" class="btn btn-primary" id="edit-note-btn">✏️ Edit</a>
             <a href="{{ url_for('notes.history', note_id=note.id) }}" class="btn btn-outline" id="history-note-btn">📜 History</a>
@@ -39,10 +60,10 @@
         <div class="comment-thread">
             {% for comment in comments %}
             <div class="comment-card" id="comment-{{ comment.id }}">
-                <div class="comment-header">
-                    <span class="comment-avatar">{{ comment.author.username[0]|upper }}</span>
-                    <div>
-                        <strong class="comment-author">{{ comment.author.username }}</strong>
+                <div class="comment-header" style="display: flex; align-items: center; gap: 0.75rem;">
+                    <img src="{{ url_for('static', filename='profile_pics/' + (comment.author.profile_image or 'default.jpg')) }}" alt="Avatar" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">
+                    <div style="display: flex; flex-direction: column;">
+                        <strong class="comment-author" style="line-height: 1;">{{ comment.author.username }}</strong>
                         <span class="comment-time">{{ comment.created_at.strftime('%b %d, %Y %I:%M %p') }}</span>
                     </div>
                 </div>

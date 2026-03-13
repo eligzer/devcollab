@@ -9,7 +9,7 @@
             <p>{{ project.description }}</p>
         {% endif %}
         <div class="project-detail-meta">
-            <span>👤 {{ project.owner.username }}</span>
+            <span style="display: flex; align-items: center; gap: 0.5rem;"><img src="{{ url_for('static', filename='profile_pics/' + (project.owner.profile_image or 'default.jpg')) }}" alt="Avatar" style="width: 20px; height: 20px; border-radius: 50%; object-fit: cover;"> {{ project.owner.username }}</span>
             <span>📅 Created {{ project.created_at.strftime('%B %d, %Y') }}</span>
             <span>📝 {{ snippets|length }} snippet{{ 's' if snippets|length != 1 else '' }}</span>
         </div>
@@ -32,7 +32,7 @@
                 <h4>{{ snippet.title }}</h4>
                 <div class="snippet-item-meta">
                     <span class="language-badge">{{ snippet.language }}</span>
-                    <span>by {{ snippet.author.username }}</span>
+                    <span style="display: flex; align-items: center; gap: 0.25rem;"><img src="{{ url_for('static', filename='profile_pics/' + (snippet.author.profile_image or 'default.jpg')) }}" alt="Avatar" style="width: 16px; height: 16px; border-radius: 50%; object-fit: cover;"> by {{ snippet.author.username }}</span>
                     <span>{{ snippet.created_at.strftime('%b %d, %Y') }}</span>
                 </div>
             </a>

@@ -1,13 +1,92 @@
 {% extends "base.html" %}
 {% block title %}Edit: {{ note.title }} — DevCollab{% endblock %}
 
-{% block content %}
-<div class="container">
-    <div class="form-wrapper glass-card animate-in" style="max-width: 640px;">
-        <h2>Edit Note</h2>
-        <p class="form-subtitle">Updating <strong>{{ note.title }}</strong></p>
+{% block extra_head %}
+<!-- EasyMDE -->
+<link rel="stylesheet" href="https://unpkg.com/easymde/dist/easymde.min.css">
+<style>
+/* AI Sidebar Styles */
+.ai-sidebar {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 15px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+.ai-header {
+    font-weight: bold;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 10px;
+}
+.ai-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-bottom: 15px;
+    border-bottom: 1px dashed var(--border-color);
+}
+.ai-section:last-child {
+    border-bottom: none;
+}
+.ai-result-box {
+    background: var(--bg-hover);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 10px;
+    font-size: 0.85rem;
+    overflow-y: auto;
+    max-height: 200px;
+    display: none;
+}
+.ai-loader {
+    display: none;
+    font-size: 0.85rem;
+    color: var(--accent);
+    align-items: center;
+    gap: 6px;
+}
+.ai-loader::after {
+    content: "⏳";
+    animation: rotate 1.5s linear infinite;
+}
+@keyframes rotate { 100% { transform: rotate(360deg); } }
+</style>
+{% endblock %}
 
-        <form method="POST" novalidate>
+{% block content %}
+<div class="container" style="max-width: 1200px; display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
+    
+    <!-- Left Column: Editor -->
+    <div>
+        <!-- Active Editors Ribbon -->
+    <div id="active-editors-strip" class="glass-card animate-in" style="display: flex; align-items: center; gap: 0.5rem; padding: 10px 15px; margin-bottom: 1rem; border-radius: 8px;">
+        <strong style="margin-right: 10px; font-size: 0.9rem;">🟢 Active Editors:</strong>
+        <div id="active-editors-list" style="display: flex; gap: -5px; flex-wrap: wrap;">
+            <!-- Avatars injected here -->
+            <span class="text-muted text-sm" style="font-style: italic;">Just you</span>
+        </div>
+    </div>
+    
+    <div class="form-wrapper glass-card animate-in">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h2 style="margin-bottom: 0;">Edit Note</h2>
+                <p class="form-subtitle">Updating <strong>{{ note.title }}</strong></p>
+            </div>
+            <!-- Edit Status Text -->
+            <div id="edit-conflict-status" style="font-size: 0.85rem; color: var(--accent); opacity: 0; transition: opacity 0.3s ease; font-weight: bold;">
+                Someone is typing...
+            </div>
+        </div>
+
+        <form method="POST" id="note-form" novalidate>
             {{ form.hidden_tag() }}
 
             <div class="form-group">
@@ -33,5 +112,364 @@
             <a href="{{ url_for('notes.detail', note_id=note.id) }}" class="text-sm text-muted">Cancel and go back</a>
         </div>
     </div>
-</div>
+    </div> <!-- End Left Column -->
+
+    <!-- Right Column: AI Assistant Sidebar -->
+    <div class="ai-sidebar animate-in">
+        <div class="ai-header">
+            ✨ AI Assistant
+        </div>
+        
+        <!-- 1. Generate Notes -->
+        <div class="ai-section">
+            <span class="text-sm font-weight-bold">Generate Notes</span>
+            <input type="text" id="ai-topic-input" class="form-control" placeholder="e.g., CPU Scheduling Algorithms" style="font-size: 0.85rem; padding: 6px 10px;">
+            <button class="btn btn-primary" id="btn-ai-generate" style="font-size: 0.85rem; padding: 6px;">📝 Generate Notes</button>
+            <div id="loader-generate" class="ai-loader">Generating...</div>
+        </div>
+        
+        <!-- 2. Contextual Actions -->
+        <div class="ai-section">
+            <span class="text-sm font-weight-bold">Document Actions</span>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="btn btn-outline" id="btn-ai-summarize" style="font-size: 0.8rem; padding: 5px 10px; flex: 1;">📑 Summarize Note</button>
+                <button class="btn btn-outline" id="btn-ai-questions" style="font-size: 0.8rem; padding: 5px 10px; flex: 1;">❓ Practice Questions</button>
+            </div>
+            
+            <span class="text-sm font-weight-bold mt-2">Selection Actions <span style="font-weight: normal; color: var(--text-muted);">(Highlight text first)</span></span>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="btn btn-outline" id="btn-ai-explain" style="font-size: 0.8rem; padding: 5px 10px; flex: 1;">💡 Explain Text</button>
+                <button class="btn btn-outline" id="btn-ai-explain-code" style="font-size: 0.8rem; padding: 5px 10px; flex: 1;">💻 Explain Code</button>
+            </div>
+            <div id="loader-context" class="ai-loader">Processing...</div>
+            <div id="ai-context-result" class="ai-result-box"></div>
+        </div>
+
+        <!-- 3. Conversational Chat -->
+        <div class="ai-section" style="flex-grow: 1; border-bottom: none;">
+            <span class="text-sm font-weight-bold">Ask Questions</span>
+            <div id="ai-chat-history" class="ai-result-box" style="display: block; flex-grow: 1; min-height: 100px; margin-bottom: 8px;">
+                <div class="text-muted" style="font-style: italic;">Ask me anything about this note.</div>
+            </div>
+            <div style="display: flex; gap: 5px;">
+                <input type="text" id="ai-chat-input" class="form-control" placeholder="Explain paging..." style="font-size: 0.85rem; padding: 6px 10px;">
+                <button class="btn btn-primary" id="btn-ai-chat" style="font-size: 0.85rem; padding: 6px;">Send</button>
+            </div>
+            <div id="loader-chat" class="ai-loader">Thinking...</div>
+        </div>
+    </div> <!-- End Right Column -->
+
+</div> <!-- End Grid Container -->
+
+<script src="https://unpkg.com/easymde/dist/easymde.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // Initialize EasyMDE
+    const easymde = new EasyMDE({
+        element: document.getElementById('edit-note-content'),
+        spellChecker: false,
+        autosave: {
+            enabled: false, // We'll handle custom socket auto-save
+        },
+        maxHeight: "450px",
+        toolbar: ["bold", "italic", "heading", "|", "quote", "unordered-list", "ordered-list", "|", "link", "image", "code", "table", "|", "preview", "side-by-side", "fullscreen", "|", "guide"]
+    });
+
+    const contentArea = document.getElementById('edit-note-content');
+    
+    function uploadImage(file) {
+        if (!file.type.startsWith('image/')) return;
+        
+        // Insert custom placeholder into codemirror
+        const cm = easymde.codemirror;
+        const startPos = cm.getCursor();
+        cm.replaceSelection('\n![Uploading image...]()\n');
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('csrf_token', '{{ csrf_token() }}');
+
+        fetch("{{ url_for('notes.upload_image') }}", {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': '{{ csrf_token() }}'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            const val = cm.getValue();
+            if (data.url) {
+                cm.setValue(val.replace('![Uploading image...]()', `![Image](${data.url})`));
+            } else {
+                alert(data.error || 'Upload failed');
+                cm.setValue(val.replace('\n![Uploading image...]()\n', ''));
+            }
+        })
+        .catch(error => {
+            alert('Upload error');
+            const val = cm.getValue();
+            cm.setValue(val.replace('\n![Uploading image...]()\n', ''));
+        });
+    }
+
+    // Bind paste for EasyMDE's underlying CodeMirror
+    easymde.codemirror.on('paste', function(cm, e) {
+        const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+        for (let index in items) {
+            const item = items[index];
+            if (item.kind === 'file') {
+                const blob = item.getAsFile();
+                if(blob) {
+                    uploadImage(blob);
+                }
+            }
+        }
+    });
+
+    easymde.codemirror.on('drop', function(cm, e) {
+        e.preventDefault();
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            uploadImage(files[0]);
+        }
+    });
+
+    // --- Collaborative Socket Logic ---
+    const NOTE_ID = {{ note.id }};
+    let isRemoteUpdate = false;
+    let typingTimeout;
+    let isDirty = false;
+
+    if (window.socket) {
+        // 1. Join room
+        window.socket.emit('note_join', { note_id: NOTE_ID }, function(response) {
+            if (response && response.status === 'success' && response.content) {
+                // If the remote buffer has content, load it.
+                // We use isRemoteUpdate flag to prevent our own load from triggering a note_update back.
+                isRemoteUpdate = true;
+                easymde.value(response.content);
+                isRemoteUpdate = false;
+            }
+        });
+
+        // 2. Transmit changes
+        easymde.codemirror.on('change', function(cm, changeObj) {
+            if (!isRemoteUpdate) {
+                isDirty = true;
+                window.socket.emit('note_edit', { note_id: NOTE_ID });
+                window.socket.emit('note_update', { note_id: NOTE_ID, content: easymde.value() });
+            }
+        });
+
+        // 3. Receive changes from others
+        window.socket.on('note_content_update', function(data) {
+            // Save cursor position to prevent jumping
+            const cursor = easymde.codemirror.getCursor();
+            const scrollInfo = easymde.codemirror.getScrollInfo();
+            
+            isRemoteUpdate = true;
+            easymde.value(data.content);
+            isRemoteUpdate = false;
+            
+            // Restore cursor
+            easymde.codemirror.setCursor(cursor);
+            easymde.codemirror.scrollTo(scrollInfo.left, scrollInfo.top);
+        });
+
+        // 4. Handle Typing / Conflict Ribbon
+        const editStatusText = document.getElementById('edit-conflict-status');
+        window.socket.on('user_editing', function(data) {
+            editStatusText.textContent = data.username + ' is editing...';
+            editStatusText.style.opacity = '1';
+            
+            clearTimeout(typingTimeout);
+            typingTimeout = setTimeout(() => {
+                editStatusText.style.opacity = '0';
+            }, 2500); // fade out after 2.5s of no typing
+        });
+
+        // 5. Active Editors UI
+        const editorsListUi = document.getElementById('active-editors-list');
+        window.socket.on('active_editors_update', function(data) {
+            editorsListUi.innerHTML = ''; // clear
+            const editors = data.editors || [];
+            if (editors.length === 0) {
+                editorsListUi.innerHTML = '<span class="text-muted text-sm" style="font-style: italic;">Just you</span>';
+            } else {
+                let html = '';
+                editors.forEach(ed => {
+                    const avatarUrl = "{{ url_for('static', filename='profile_pics/') }}" + ed.avatar;
+                    html += `<div style="display: flex; align-items: center; gap: 4px; background: rgba(0,0,0,0.05); padding: 2px 8px; border-radius: 12px; margin-right: 5px;">
+                                <img src="${avatarUrl}" alt="Avatar" style="width: 20px; height: 20px; border-radius: 50%; object-fit: cover;">
+                                <span class="text-sm font-weight-bold" style="line-height: 1;">${ed.username}</span>
+                             </div>`;
+                });
+                editorsListUi.innerHTML = html;
+            }
+        });
+
+        // 6. Leave Room on Unload
+        window.addEventListener('beforeunload', function() {
+            window.socket.emit('note_leave', { note_id: NOTE_ID });
+        });
+        
+        // 7. Auto-save Loop
+        setInterval(() => {
+            if (isDirty) {
+                window.socket.emit('note_save', { note_id: NOTE_ID, content: easymde.value() }, function(res) {
+                    if(res && res.status === 'success') {
+                        isDirty = false;
+                    }
+                });
+            }
+        }, 5000); // 5 seconds
+        
+        window.socket.on('note_saved', function(data) {
+             // Optional: Show a subtle "Saved at 5:00 PM" indicator, maybe share the conflict status ribon
+             editStatusText.textContent = 'Auto-saved at ' + data.updated_at;
+             editStatusText.style.opacity = '0.7';
+             clearTimeout(typingTimeout);
+             typingTimeout = setTimeout(() => {
+                 editStatusText.style.opacity = '0';
+             }, 3000);
+        });
+    }
+
+    // --- AI Assistant Logic ---
+    const csrfToken = "{{ csrf_token() }}";
+    
+    // Helper to run AI Requests
+    async function runAiRequest(endpoint, payload, loaderId, resultBoxId, onSuccess) {
+        const loader = document.getElementById(loaderId);
+        const resultBox = resultBoxId ? document.getElementById(resultBoxId) : null;
+        
+        loader.style.display = 'flex';
+        if(resultBox) {
+            resultBox.style.display = 'none';
+            resultBox.innerHTML = '';
+        }
+        
+        try {
+            const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            
+            loader.style.display = 'none';
+            
+            if (!res.ok) {
+                alert(data.error || 'Something went wrong.');
+                return;
+            }
+            
+            if (onSuccess) onSuccess(data.result);
+            else if (resultBox) {
+                // simple render
+                resultBox.style.display = 'block';
+                // replace newlines with br for simple markdown preview or leave as raw
+                let formatted = data.result.replace(/\ng/, '<br>');
+                // very simple bolding rule
+                formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                resultBox.innerHTML = formatted;
+            }
+            
+        } catch(e) {
+            loader.style.display = 'none';
+            alert("Network error processing AI request.");
+        }
+    }
+
+    // 1. Generate Notes
+    document.getElementById('btn-ai-generate').addEventListener('click', () => {
+        const topic = document.getElementById('ai-topic-input').value.trim();
+        if (!topic) return alert('Please enter a topic.');
+        
+        runAiRequest('{{ url_for("ai.api_generate") }}', { topic: topic }, 'loader-generate', null, (result) => {
+            const cm = easymde.codemirror;
+            const currentVal = cm.getValue();
+            const newVal = currentVal + (currentVal ? '\n\n' : '') + result;
+            cm.setValue(newVal);
+            
+            // Trigger change emit manually if required, but EasyMDE handles 'change'
+            document.getElementById('ai-topic-input').value = '';
+        });
+    });
+
+    // 2. Action Helpers
+    const ctxResult = document.getElementById('ai-context-result');
+    
+    document.getElementById('btn-ai-summarize').addEventListener('click', () => {
+        const content = easymde.value();
+        if (!content.trim()) return alert("Editor is empty.");
+        runAiRequest('{{ url_for("ai.api_summarize") }}', { content: content }, 'loader-context', 'ai-context-result');
+    });
+
+    document.getElementById('btn-ai-questions').addEventListener('click', () => {
+        const content = easymde.value();
+        if (!content.trim()) return alert("Editor is empty.");
+        runAiRequest('{{ url_for("ai.api_questions") }}', { content: content }, 'loader-context', 'ai-context-result', (result) => {
+            ctxResult.style.display = 'block';
+            const mapped = result.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            ctxResult.innerHTML = mapped + `<br><br><button class="btn btn-sm btn-outline mt-2" onclick="easymde.codemirror.setValue(easymde.value() + '\\n\\n' + this.getAttribute('data-raw'))" data-raw="${encodeURIComponent(result)}">Insert into note</button>`;
+        });
+    });
+
+    // Handle button insertion from the innerHTML injected above
+    ctxResult.addEventListener('click', (e) => {
+        if(e.target.tagName === 'BUTTON' && e.target.hasAttribute('data-raw')) {
+            const raw = decodeURIComponent(e.target.getAttribute('data-raw'));
+            easymde.codemirror.setValue(easymde.value() + "\n\n" + raw);
+        }
+    });
+
+    document.getElementById('btn-ai-explain').addEventListener('click', () => {
+        const text = easymde.codemirror.getSelection();
+        if(!text) return alert("Please highlight text in the editor first.");
+        runAiRequest('{{ url_for("ai.api_explain") }}', { text: text, is_code: false }, 'loader-context', 'ai-context-result');
+    });
+
+    document.getElementById('btn-ai-explain-code').addEventListener('click', () => {
+        const text = easymde.codemirror.getSelection();
+        if(!text) return alert("Please highlight code snippet in the editor first.");
+        runAiRequest('{{ url_for("ai.api_explain") }}', { text: text, is_code: true }, 'loader-context', 'ai-context-result');
+    });
+
+    // 3. Chat Logic
+    document.getElementById('btn-ai-chat').addEventListener('click', () => {
+        const inputField = document.getElementById('ai-chat-input');
+        const query = inputField.value.trim();
+        const content = easymde.value();
+        const historyBox = document.getElementById('ai-chat-history');
+        
+        if (!query) return;
+        
+        // Append user query
+        historyBox.innerHTML += `<div style="margin-bottom: 8px;"><b>You:</b> ${query}</div>`;
+        historyBox.scrollTop = historyBox.scrollHeight;
+        inputField.value = '';
+        
+        runAiRequest('{{ url_for("ai.api_chat") }}', { query: query, context: content }, 'loader-chat', null, (result) => {
+             const mapped = result.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+             historyBox.innerHTML += `<div style="margin-bottom: 12px; color: var(--accent-secondary);"><b>AI:</b> ${mapped}</div>`;
+             historyBox.scrollTop = historyBox.scrollHeight;
+        });
+    });
+
+    // Allow Enter key in chat
+    document.getElementById('ai-chat-input').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            document.getElementById('btn-ai-chat').click();
+        }
+    });
+
+
+});
+</script>
 {% endblock %}

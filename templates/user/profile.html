@@ -19,10 +19,72 @@
                 <p style="color: #666; font-style: italic; margin-top: 10px;">User hasn't added a bio yet.</p>
             {% endif %}
             
+            <div style="display: flex; gap: 1rem; margin-top: 10px;">
+                <span title="Followers"><strong>{{ user.followers.count() }}</strong> Followers</span>
+                <span title="Following"><strong>{{ user.followed.count() }}</strong> Following</span>
+            </div>
+            
             {% if current_user.is_authenticated and current_user.id == user.id %}
                 <a href="{{ url_for('user.edit_profile') }}" class="btn" style="display:inline-block; margin-top: 10px;">Edit Profile</a>
+            {% elif current_user.is_authenticated %}
+                <div style="display: flex; gap: 0.5rem;">
+                    {% if is_following %}
+                        <form action="{{ url_for('user.unfollow', username=user.username) }}" method="POST" style="display:inline;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-secondary" style="margin-top: 10px;">Unfollow</button>
+                        </form>
+                    {% else %}
+                        <form action="{{ url_for('user.follow', username=user.username) }}" method="POST" style="display:inline;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-primary" style="margin-top: 10px;">Follow</button>
+                        </form>
+                    {% endif %}
+                    
+                    <a href="{{ url_for('messages.conversation', username=user.username) }}" class="btn btn-outline" style="margin-top: 10px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none;">✉️ Message</a>
+                </div>
             {% endif %}
         </div>
+    </div>
+    
+    <div class="profile-links" style="margin-bottom: 2rem;">
+        <h3>Links</h3>
+        {% if user.links.count() > 0 %}
+            <ul style="list-style: none; padding: 0;">
+            {% for link in user.links %}
+                <li style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <a href="{{ link.url }}" target="_blank" style="color: var(--accent); text-decoration: none;">🔗 {{ link.title }}</a>
+                    {% if current_user.is_authenticated and current_user.id == user.id %}
+                        <form action="{{ url_for('user.delete_link', user_id=user.id, link_id=link.id) }}" method="POST" style="display:inline;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" style="background:none; border:none; color: var(--danger); cursor:pointer; font-size: 0.8rem;">[Delete]</button>
+                        </form>
+                    {% endif %}
+                </li>
+            {% endfor %}
+            </ul>
+        {% else %}
+            <p class="text-muted">No custom links added.</p>
+        {% endif %}
+
+        {% if current_user.is_authenticated and current_user.id == user.id %}
+        <div class="add-link-form" style="margin-top: 1rem; padding: 1rem; background: var(--bg-card); border-radius: 8px;">
+            <h4>Add New Link</h4>
+            <form action="{{ url_for('user.add_link') }}" method="POST" style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+                {{ link_form.hidden_tag() }}
+                <div style="flex: 1; min-width: 150px;">
+                    {{ link_form.title.label(style="display:block; margin-bottom:0.25rem;") }}
+                    {{ link_form.title(class="form-control", placeholder="e.g. Portfolio") }}
+                </div>
+                <div style="flex: 2; min-width: 250px;">
+                    {{ link_form.url.label(style="display:block; margin-bottom:0.25rem;") }}
+                    {{ link_form.url(class="form-control", placeholder="https://...") }}
+                </div>
+                <div>
+                    {{ link_form.submit(class="btn btn-primary") }}
+                </div>
+            </form>
+        </div>
+        {% endif %}
     </div>
     
     <h3>Notes by {{ user.username }}</h3>

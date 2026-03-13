@@ -14,7 +14,7 @@
         {% endif %}
         <div class="snippet-detail-meta">
             <span class="language-badge">{{ snippet.language }}</span>
-            <span>by {{ snippet.author.username }}</span>
+            <span style="display: flex; align-items: center; gap: 0.5rem;"><img src="{{ url_for('static', filename='profile_pics/' + (snippet.author.profile_image or 'default.jpg')) }}" alt="Avatar" style="width: 20px; height: 20px; border-radius: 50%; object-fit: cover;"> by {{ snippet.author.username }}</span>
             <span>in <a href="{{ url_for('projects.detail', project_id=snippet.project.id) }}">{{ snippet.project.name }}</a></span>
             <span>{{ snippet.created_at.strftime('%B %d, %Y') }}</span>
         </div>
@@ -45,10 +45,10 @@
         <div class="comment-thread">
             {% for comment in comments %}
             <div class="comment-card" id="comment-{{ comment.id }}">
-                <div class="comment-header">
-                    <span class="comment-avatar">{{ comment.author.username[0]|upper }}</span>
-                    <div>
-                        <strong class="comment-author">{{ comment.author.username }}</strong>
+                <div class="comment-header" style="display: flex; align-items: center; gap: 0.75rem;">
+                    <img src="{{ url_for('static', filename='profile_pics/' + (comment.author.profile_image or 'default.jpg')) }}" alt="Avatar" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">
+                    <div style="display: flex; flex-direction: column;">
+                        <strong class="comment-author" style="line-height: 1;">{{ comment.author.username }}</strong>
                         <span class="comment-time">{{ comment.created_at.strftime('%b %d, %Y %I:%M %p') }}</span>
                     </div>
                 </div>

@@ -17,7 +17,7 @@
             <h3>{{ project.name }}</h3>
             <p>{{ project.description[:150] }}{% if project.description|length > 150 %}…{% endif %}</p>
             <div class="project-meta">
-                <span>👤 {{ project.owner.username }}</span>
+                <span style="display: flex; align-items: center; gap: 0.5rem;"><img src="{{ url_for('static', filename='profile_pics/' + (project.owner.profile_image or 'default.jpg')) }}" alt="Avatar" style="width: 20px; height: 20px; border-radius: 50%; object-fit: cover;"> {{ project.owner.username }}</span>
                 <span>📝 {{ project.snippets.count() }} snippets</span>
                 <span>📅 {{ project.created_at.strftime('%b %d, %Y') }}</span>
             </div>

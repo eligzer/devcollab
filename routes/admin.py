@@ -20,6 +20,14 @@ def admin_required(f):
     return decorated
 
 
+@admin_bp.route('/')
+@admin_required
+def dashboard():
+    users = User.query.order_by(User.created_at.desc()).all()
+    codes = InviteCode.query.order_by(InviteCode.created_at.desc()).all()
+    return render_template('admin/dashboard.html', users=users, codes=codes)
+
+
 @admin_bp.route('/invite-codes', methods=['GET', 'POST'])
 @admin_required
 def invite_codes():
@@ -70,3 +78,19 @@ def seed_admin():
     db.session.commit()
     flash('Admin account created (admin / admin123). Starter invite code: WELCOME2026', 'success')
     return redirect(url_for('auth.login'))
+
+
+@admin_bp.route('/users/<int:user_id>/toggle_status', methods=['POST'])
+@admin_required
+def toggle_user_status(user_id):
+    user = User.query.get_or_404(user_id)
+    if user.is_admin:
+        flash('Cannot modify another admin account.', 'danger')
+        return redirect(url_for('admin.dashboard'))
+        
+    user.is_active = not user.is_active
+    db.session.commit()
+    
+    status = "reactivated" if user.is_active else "suspended"
+    flash(f'User {user.username} has been {status}.', 'success')
+    return redirect(url_for('admin.dashboard'))

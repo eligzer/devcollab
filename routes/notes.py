@@ -1,10 +1,14 @@
-from datetime import datetime, timezone
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from werkzeug.utils import secure_filename
+import os
+import uuid
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, jsonify
 from flask_login import login_required, current_user
 from sqlalchemy import or_
-from models import db, ClassNote, ClassNoteHistory, Comment, NoteLike
+from models import db, ClassNote, ClassNoteHistory, Comment, NoteLike, User, Notification
 from forms import ClassNoteForm, CommentForm, SearchForm
 from utils import log_activity
+from extensions import socketio
+from datetime import datetime, timezone
 
 notes_bp = Blueprint('notes', __name__, url_prefix='/notes')
 
@@ -91,6 +95,11 @@ def edit_note(note_id):
         note.title = form.title.data
         note.content = form.content.data
         note.updated_at = datetime.now(timezone.utc)
+        
+        # Sync the real-time buffer inline to prevent staleness on hard submits
+        from events import note_buffers
+        note_buffers[note.id] = note.content
+        
         log_activity(current_user.id, 'edit_note', 'note', note.id,
                      f'{current_user.username} edited the Class Note "{note.title}"')
         db.session.commit()
@@ -147,9 +156,20 @@ def comment_note(note_id):
         )
         db.session.add(comment)
         db.session.flush()
+        
+        # Notify note author if not the same user
+        note_author = User.query.filter_by(username=note.created_by).first()
+        if note_author and note_author.id != current_user.id:
+            notif = Notification(user_id=note_author.id, message=f'{current_user.username} commented on your note "{note.title}"')
+            db.session.add(notif)
+            
         log_activity(current_user.id, 'comment', 'comment', comment.id,
                      f'{current_user.username} commented on Class Note "{note.title}"')
         db.session.commit()
+        
+        if note_author and note_author.id != current_user.id:
+            socketio.emit('new_notification', {'count_increment': 1}, room=f"user_{note_author.id}")
+            
         flash('Comment posted!', 'success')
     return redirect(url_for('notes.detail', note_id=note.id))
 
@@ -168,8 +188,51 @@ def toggle_like(note_id):
     else:
         new_like = NoteLike(user_id=current_user.id, note_id=note.id)
         db.session.add(new_like)
+        
+        # Notify note author if not the same user
+        note_author = User.query.filter_by(username=note.created_by).first()
+        if note_author and note_author.id != current_user.id:
+            notif = Notification(user_id=note_author.id, message=f'{current_user.username} liked your note "{note.title}"')
+            db.session.add(notif)
+            
         db.session.commit()
+        
+        if note_author and note_author.id != current_user.id:
+            socketio.emit('new_notification', {'count_increment': 1}, room=f"user_{note_author.id}")
+            
         log_activity(current_user.id, 'like_note', 'note', note.id,
                      f'{current_user.username} liked the Class Note "{note.title}"')
                      
     return redirect(request.referrer or url_for('notes.detail', note_id=note.id))
+
+
+@notes_bp.route('/upload_image', methods=['POST'])
+@login_required
+def upload_image():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
+        
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+        
+    allowed_extensions = {'png', 'jpg', 'jpeg', 'gif'}
+    def allowed_file(filename):
+        return '.' in filename and \
+               filename.rsplit('.', 1)[1].lower() in allowed_extensions
+
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        unique_filename = str(uuid.uuid4()) + "_" + filename
+        
+        uploads_dir = os.path.join(current_app.root_path, 'static', 'uploads')
+        if not os.path.exists(uploads_dir):
+            os.makedirs(uploads_dir)
+            
+        filepath = os.path.join(uploads_dir, unique_filename)
+        file.save(filepath)
+        
+        file_url = url_for('static', filename='uploads/' + unique_filename)
+        return jsonify({'url': file_url})
+        
+    return jsonify({'error': 'Invalid file type.'}), 400

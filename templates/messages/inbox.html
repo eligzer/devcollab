@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Inbox — DevCollab{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Inbox</h1>
+    <hr class="divider">
+
+    {% if latest_messages %}
+        <div class="inbox-list" style="display: flex; flex-direction: column; gap: 1rem;">
+            {% for msg in latest_messages %}
+                {% set other_id = msg.receiver_id if msg.sender_id == current_user.id else msg.sender_id %}
+                <!-- It requires fetching the other user object or utilizing the relationship -->
+                <!-- We can rely on msg.sender and msg.receiver relationships -->
+                {% set other_user = msg.receiver if msg.sender_id == current_user.id else msg.sender %}
+                <a href="{{ url_for('messages.conversation', username=other_user.username) }}" 
+                   style="display: flex; align-items: center; gap: 1rem; padding: 1rem; background: var(--bg-card); border-radius: 8px; text-decoration: none; color: white; {% if not msg.is_read and msg.receiver_id == current_user.id %}border-left: 4px solid var(--accent);{% else %}border: 1px solid var(--border-color);{% endif %}">
+                    
+                    <img src="{{ url_for('static', filename='profile_pics/' + (other_user.profile_image or 'default.jpg')) }}" alt="Avatar" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover;">
+                    <div style="flex: 1;">
+                        <h3 style="margin: 0;">{{ other_user.username }}</h3>
+                        <p style="margin: 5px 0 0; color: #aaa;">
+                            {% if msg.sender_id == current_user.id %}
+                                You: 
+                            {% endif %}
+                            {{ msg.content[:60] }}{% if msg.content|length > 60 %}...{% endif %}
+                        </p>
+                    </div>
+                    <div style="color: #666; font-size: 0.85rem;">
+                        {{ msg.created_at.strftime('%b %d, %Y') }}
+                    </div>
+                </a>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state glass-card text-center">
+            <p>You have no messages yet. Visit a user's profile to start a conversation!</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

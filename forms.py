@@ -101,3 +101,9 @@ class EditProfileForm(FlaskForm):
 class SearchForm(FlaskForm):
     q = StringField('Search', validators=[DataRequired()])
     submit = SubmitField('Search')
+
+
+class UserLinkForm(FlaskForm):
+    title = StringField('Link Title', validators=[DataRequired(), Length(max=100)])
+    url = StringField('URL', validators=[DataRequired(), Length(max=500)])
+    submit = SubmitField('Add Link')

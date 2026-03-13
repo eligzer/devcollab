@@ -20,22 +20,33 @@
                 
                 <!-- Search Bar -->
                 <li>
-                    <form action="{{ url_for('notes.search_notes') }}" method="get" class="search-form" style="display:inline-block; margin: 0 10px;">
-                        <input type="text" name="q" placeholder="Search notes..." value="{{ request.args.get('q', '') }}" style="padding: 5px; border-radius: 4px; border: 1px solid #ccc; background-color:#333; color:white;">
-                        <button type="submit" style="padding: 5px 10px; background-color:#4a90e2; color:white; border:none; border-radius: 4px; cursor:pointer;">Search</button>
+                    <form action="{{ url_for('main.search') }}" method="get" class="search-form" style="display:inline-block; margin: 0 10px;">
+                        <input type="text" name="q" placeholder="Search..." value="{{ request.args.get('q', '') }}" style="padding: 5px; border-radius: 4px; border: 1px solid #ccc; background-color: var(--bg-card); color: var(--text-main);">
+                        <button type="submit" style="padding: 5px 10px; background-color: var(--accent); color:white; border:none; border-radius: 4px; cursor:pointer;">Search</button>
                     </form>
                 </li>
                 
                 {% if current_user.is_authenticated %}
                     <li><a href="{{ url_for('projects.create_project') }}">New Project</a></li>
                     {% if current_user.is_admin %}
-                        <li><a href="{{ url_for('admin.invite_codes') }}">Admin</a></li>
+                        <li><a href="{{ url_for('admin.dashboard') }}">Admin</a></li>
                     {% endif %}
-                    <li class="nav-item dropdown">
-                        <img src="{{ url_for('static', filename='profile_pics/' + (current_user.profile_image or 'default.jpg')) }}" alt="Profile Picture" style="width: 30px; height: 30px; border-radius: 50%; vertical-align: middle; margin-right: 5px; cursor: pointer; object-fit: cover;">
-                        <a href="#" style="vertical-align: middle;">{{ current_user.username }}</a>
-                        <div class="dropdown-content" style="display: none; position: absolute; background-color: #222; min-width: 160px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2); z-index: 1;">
+                    <li class="nav-item">
+                        <a href="{{ url_for('user.notifications') }}" style="position: relative; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; text-decoration: none;">
+                            <span style="font-size: 1.2rem;">🔔</span>
+                            <span id="notif-badge" style="position: absolute; top: -2px; right: -2px; background: var(--danger); color: white; border-radius: 50%; width: 16px; height: 16px; font-size: 0.7rem; display: {% if unread_notifications_count > 0 %}flex{% else %}none{% endif %}; align-items: center; justify-content: center; font-weight: bold;">
+                                {{ unread_notifications_count }}
+                            </span>
+                        </a>
+                    </li>
+                    <li class="nav-item" style="position: relative; padding-right: 1rem; margin-left: 0.5rem;">
+                        <a href="#" style="vertical-align: middle; display: flex; align-items: center; gap: 0.5rem;">
+                            <img src="{{ url_for('static', filename='profile_pics/' + (current_user.profile_image or 'default.jpg')) }}" alt="Avatar" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover;">
+                            {{ current_user.username }}
+                        </a>
+                        <div class="dropdown-menu" style="display: none; position: absolute; top: 100%; right: 0; background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 4px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); min-width: 150px; z-index: 1000;">
                             <a href="{{ url_for('user.profile', username=current_user.username) }}" style="color: white; padding: 12px 16px; text-decoration: none; display: block;">Profile</a>
+                            <a href="{{ url_for('messages.inbox') }}" style="color: white; padding: 12px 16px; text-decoration: none; display: block;">Inbox</a>
                             <a href="{{ url_for('user.edit_profile') }}" style="color: white; padding: 12px 16px; text-decoration: none; display: block;">Settings</a>
                             <a href="{{ url_for('auth.logout') }}" style="color: white; padding: 12px 16px; text-decoration: none; display: block;">Sign Out</a>
                         </div>
@@ -71,22 +82,43 @@
 
     {% block extra_scripts %}{% endblock %}
     
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
     <script>
+        {% if current_user.is_authenticated %}
+            // Global socket instance for authenticated users
+            const socket = io();
+            
+            socket.on('connect', () => {
+                console.log('Connected to real-time server');
+            });
+
+            // Listen for new notifications to badge UI
+            socket.on('new_notification', function() {
+                const badge = document.getElementById('notif-badge');
+                if (badge) {
+                    let currentCount = parseInt(badge.textContent || '0');
+                    badge.textContent = currentCount + 1;
+                    badge.style.display = 'flex';
+                }
+            });
+            
+            socket.on('user_online', function(data) {
+                console.log('User online:', data.user_id);
+                // Can be wired to UI to show green dots
+            });
+            
+            socket.on('user_offline', function(data) {
+                console.log('User offline:', data.user_id);
+                // Can be wired to UI to hide green dots
+            });
+        {% else %}
+            const socket = null;
+        {% endif %}
+
         document.addEventListener('DOMContentLoaded', function() {
             const userDropdown = document.querySelector('.nav-item.dropdown');
             if (userDropdown) {
-                userDropdown.addEventListener('click', function(e) {
-                    const content = this.querySelector('.dropdown-content');
-                    content.style.display = content.style.display === 'block' ? 'none' : 'block';
-                    e.stopPropagation();
-                });
-                
-                document.addEventListener('click', function(e) {
-                    const content = userDropdown.querySelector('.dropdown-content');
-                    if(content && content.style.display === 'block') {
-                        content.style.display = 'none';
-                    }
-                });
+                // Dropdown logic...
             }
         });
     </script>
