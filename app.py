@@ -1,5 +1,4 @@
 import os
-
 from flask import Flask
 from flask_login import LoginManager, current_user
 from flask_wtf.csrf import CSRFProtect
@@ -11,11 +10,9 @@ from extensions import socketio
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
-
 # Rate limiter
 limiter = Limiter(key_func=get_remote_address)
 
-# Login manager
 login_manager = LoginManager()
 login_manager.login_view = "auth.login"
 login_manager.login_message_category = "info"
@@ -24,15 +21,12 @@ login_manager.login_message_category = "info"
 def create_app():
     app = Flask(__name__)
 
-    # Load config
     app.config.from_object(Config)
 
     # Upload folder
     upload_folder = os.path.join(app.root_path, "static", "profile_pics")
     app.config["UPLOAD_FOLDER"] = upload_folder
-
-    if not os.path.exists(upload_folder):
-        os.makedirs(upload_folder)
+    os.makedirs(upload_folder, exist_ok=True)
 
     # Security
     CSRFProtect(app)
@@ -40,21 +34,14 @@ def create_app():
     # Initialize extensions
     db.init_app(app)
     login_manager.init_app(app)
+    socketio.init_app(app, cors_allowed_origins="*")
     limiter.init_app(app)
 
-    # SocketIO
-    socketio.init_app(
-        app,
-        cors_allowed_origins="*",
-        async_mode="threading"
-    )
-
-    # User loader
     @login_manager.user_loader
     def load_user(user_id):
         return User.query.get(int(user_id))
 
-    # Blueprint imports
+    # Import blueprints
     from routes.main import main_bp
     from routes.auth import auth_bp
     from routes.projects import projects_bp
@@ -78,21 +65,18 @@ def create_app():
     app.register_blueprint(messages_bp)
     app.register_blueprint(ai_bp)
 
-    # Notification context processor
+    # Notification injector
     @app.context_processor
     def inject_notifications():
-        try:
-            if current_user.is_authenticated:
-                from models import Notification
+        if current_user.is_authenticated:
+            from models import Notification
 
-                count = Notification.query.filter_by(
-                    user_id=current_user.id,
-                    is_read=False
-                ).count()
+            count = Notification.query.filter_by(
+                user_id=current_user.id,
+                is_read=False
+            ).count()
 
-                return dict(unread_notifications_count=count)
-        except Exception:
-            pass
+            return dict(unread_notifications_count=count)
 
         return dict(unread_notifications_count=0)
 
@@ -100,53 +84,40 @@ def create_app():
     import events
 
     # Database initialization
+    with app.app_context():
+        try:
+            db.create_all()
 
-with app.app_context():
+            admin_username = os.environ.get("ADMIN_USERNAME", "admin")
+            admin_password = os.environ.get("ADMIN_PASSWORD", "elixer")
+            admin_email = os.environ.get("ADMIN_EMAIL", "eligzerr@gmail.com")
 
-    try:
-        db.create_all()
-        print("Database tables ensured.")
+            admin = User.query.filter_by(username=admin_username).first()
 
-        admin_username = os.environ.get("ADMIN_USERNAME", "admin")
-        admin_password = os.environ.get("ADMIN_PASSWORD", "elixer")
-        admin_email = os.environ.get("ADMIN_EMAIL", "eligzerr@gmail.com")
+            if admin is None:
+                admin = User(
+                    username=admin_username,
+                    email=admin_email,
+                    is_admin=True
+                )
 
-        admin = User.query.filter_by(username=admin_username).first()
+                admin.set_password(admin_password)
+                db.session.add(admin)
+                db.session.commit()
 
-        if admin is None:
-            admin = User(
-                username=admin_username,
-                email=admin_email,
-                is_admin=True
-            )
+                print("Admin created")
 
-            admin.set_password(admin_password)
-            db.session.add(admin)
-            db.session.commit()
+            else:
+                admin.set_password(admin_password)
+                db.session.commit()
 
-            print("Admin user created successfully.")
+                print("Admin password synced")
 
-        else:
-            # Sync admin password with environment variable
-            admin.set_password(admin_password)
-            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            print("Database initialization error:", e)
 
-            print("Admin password synced with environment variable.")
-
-    except Exception as e:
-        db.session.rollback()
-        print("Database initialization error:", e)
+    return app
 
 
-# Run server
-if __name__ == "__main__":
-    app = create_app()
-
-    port = int(os.environ.get("PORT", 5000))
-
-    socketio.run(
-        app,
-        host="0.0.0.0",
-        port=port,
-        debug=True
-    )
+app = create_app()
