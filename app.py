@@ -46,7 +46,7 @@ def create_app():
     socketio.init_app(
         app,
         cors_allowed_origins="*",
-        async_mode="gevent"
+        async_mode="threading"
     )
 
     # User loader
