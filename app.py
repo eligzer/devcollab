@@ -55,18 +55,20 @@ def create_app():
     app.register_blueprint(admin_bp)
     app.register_blueprint(user_bp)
 
-    # Database initialization
+    # Database setup
     with app.app_context():
+
         db.create_all()
 
-        # Bootstrap admin user
-        admin_exists = User.query.filter_by(is_admin=True).first()
+        # Read admin credentials from environment
+        admin_username = os.environ.get("ADMIN_USERNAME", "admin")
+        admin_password = os.environ.get("ADMIN_PASSWORD", "elixer")
+        admin_email = os.environ.get("ADMIN_EMAIL", "eligzerr@gmail.com")
 
-        if not admin_exists:
-            admin_username = os.environ.get("ADMIN_USERNAME", "admin")
-            admin_password = os.environ.get("ADMIN_PASSWORD", "admin123")
-            admin_email = os.environ.get("ADMIN_EMAIL", "admin@example.com")
+        admin = User.query.filter_by(username=admin_username).first()
 
+        if not admin:
+            # Create admin if not exists
             admin = User(
                 username=admin_username,
                 email=admin_email,
@@ -74,15 +76,25 @@ def create_app():
             )
 
             admin.set_password(admin_password)
-
             db.session.add(admin)
 
             try:
                 db.session.commit()
-                print(f"Admin user created: {admin_username}")
+                print("Admin user created successfully")
             except Exception as e:
                 db.session.rollback()
-                print(f"Admin bootstrap error: {e}")
+                print(f"Admin creation error: {e}")
+
+        else:
+            # Sync password with environment variable
+            admin.set_password(admin_password)
+
+            try:
+                db.session.commit()
+                print("Admin password synced with environment variable")
+            except Exception as e:
+                db.session.rollback()
+                print(f"Admin update error: {e}")
 
     return app
 
