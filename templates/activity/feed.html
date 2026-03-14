@@ -10,14 +10,19 @@
     {% if activities %}
     <div class="activity-timeline">
         {% for a in activities %}
-        <div class="activity-item animate-in" style="display: flex; gap: 1rem; align-items: flex-start; margin-bottom: 1.5rem; padding: 1rem; background: var(--bg-card); border-radius: 8px; border: 1px solid var(--border-color);">
+        <div class="activity-item animate-in"
+            style="display: flex; gap: 1rem; align-items: flex-start; margin-bottom: 1.5rem; padding: 1rem; background: var(--bg-card); border-radius: 8px; border: 1px solid var(--border-color);">
             <div style="flex-shrink: 0;">
-                <img src="{{ url_for('static', filename='profile_pics/' + (a.user.profile_image or 'default.jpg')) }}" alt="Avatar" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover;">
+                <img src="{{ url_for('static', filename='profile_pics/' + (a.user.profile_image or 'default.jpg')) }}"
+                    alt="Avatar" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover;">
             </div>
             <div class="activity-content" style="flex-grow: 1;">
-                <p style="margin: 0; font-weight: bold;"><a href="{{ url_for('user.profile', username=a.user.username) }}" style="color: var(--accent); text-decoration: none;">{{ a.user.username }}</a></p>
+                <p style="margin: 0; font-weight: bold;"><a
+                        href="{{ url_for('user.profile', username=a.user.username) }}"
+                        style="color: var(--accent); text-decoration: none;">{{ a.user.username }}</a></p>
                 <p class="activity-desc" style="margin: 5px 0; color: var(--text-main);">{{ a.description }}</p>
-                <span class="activity-time" style="font-size: 0.85rem; color: var(--text-muted);">{{ a.created_at.strftime('%b %d, %Y %I:%M %p') }}</span>
+                <span class="activity-time" style="font-size: 0.85rem; color: var(--text-muted);">{{
+                    a.created_at.strftime('%b %d, %Y %I:%M %p') }}</span>
             </div>
         </div>
         {% endfor %}
@@ -28,6 +33,4 @@
     </div>
     {% endif %}
 </div>
-{% endblock %}
-
 {% endblock %}
