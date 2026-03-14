@@ -4,64 +4,11 @@
 {% block extra_head %}
 <!-- EasyMDE -->
 <link rel="stylesheet" href="https://unpkg.com/easymde/dist/easymde.min.css">
-<style>
-/* AI Sidebar Styles */
-.ai-sidebar {
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 15px;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-.ai-header {
-    font-weight: bold;
-    font-size: 1.1rem;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: 10px;
-}
-.ai-section {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding-bottom: 15px;
-    border-bottom: 1px dashed var(--border-color);
-}
-.ai-section:last-child {
-    border-bottom: none;
-}
-.ai-result-box {
-    background: var(--bg-hover);
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    padding: 10px;
-    font-size: 0.85rem;
-    overflow-y: auto;
-    max-height: 200px;
-    display: none;
-}
-.ai-loader {
-    display: none;
-    font-size: 0.85rem;
-    color: var(--accent);
-    align-items: center;
-    gap: 6px;
-}
-.ai-loader::after {
-    content: "⏳";
-    animation: rotate 1.5s linear infinite;
-}
-@keyframes rotate { 100% { transform: rotate(360deg); } }
-</style>
+<!-- AI Styles have been moved to style.css -->
 {% endblock %}
 
 {% block content %}
-<div class="container" style="max-width: 1200px; display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
+<div class="container editor-layout-wrapper" style="max-width: 1200px;" id="editor-layout">
     
     <!-- Left Column: Editor -->
     <div>
@@ -115,10 +62,12 @@
     </div> <!-- End Left Column -->
 
     <!-- Right Column: AI Assistant Sidebar -->
-    <div class="ai-sidebar animate-in">
-        <div class="ai-header">
-            ✨ AI Assistant
-        </div>
+    <div class="ai-sidebar-container hidden" id="ai-sidebar-container">
+        <div class="ai-sidebar">
+            <div class="ai-header">
+                <span>✨ AI Assistant</span>
+                <button class="btn btn-outline" id="ai-close-mobile" style="padding: 2px 8px; font-size: 0.8rem; display: none;">✖</button>
+            </div>
         
         <!-- 1. Generate Notes -->
         <div class="ai-section">
@@ -157,9 +106,15 @@
             </div>
             <div id="loader-chat" class="ai-loader">Thinking...</div>
         </div>
+        </div> <!-- End AI Sidebar Inner Box -->
     </div> <!-- End Right Column -->
 
 </div> <!-- End Grid Container -->
+
+<!-- AI Assistant Toggle FAB (Mobile mainly but functional everywhere) -->
+<button class="ai-fab" id="auto-ai-toggle" aria-label="Toggle AI Assistant" title="Toggle AI Assistant">
+    ✨
+</button>
 
 <script src="https://unpkg.com/easymde/dist/easymde.min.js"></script>
 <script>
@@ -337,138 +292,78 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // --- AI Assistant Logic ---
-    const csrfToken = "{{ csrf_token() }}";
+    // --- Optional AI Lazy Loading Logic ---
+    const aiToggleBtn = document.getElementById('auto-ai-toggle');
+    const aiSidebarContainer = document.getElementById('ai-sidebar-container');
+    const editorLayout = document.getElementById('editor-layout');
+    const aiCloseMobile = document.getElementById('ai-close-mobile');
     
-    // Helper to run AI Requests
-    async function runAiRequest(endpoint, payload, loaderId, resultBoxId, onSuccess) {
-        const loader = document.getElementById(loaderId);
-        const resultBox = resultBoxId ? document.getElementById(resultBoxId) : null;
-        
-        loader.style.display = 'flex';
-        if(resultBox) {
-            resultBox.style.display = 'none';
-            resultBox.innerHTML = '';
-        }
-        
-        try {
-            const res = await fetch(endpoint, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrfToken
-                },
-                body: JSON.stringify(payload)
-            });
-            const data = await res.json();
-            
-            loader.style.display = 'none';
-            
-            if (!res.ok) {
-                alert(data.error || 'Something went wrong.');
-                return;
+    // Show close button only on mobile
+    if (window.innerWidth <= 1024) {
+        aiCloseMobile.style.display = 'block';
+    }
+    
+    let isAiLoaded = false;
+    let isAiVisible = false;
+
+    function toggleAiSidebar() {
+        if (!isAiVisible) {
+            // Lazy load AI if not already loaded
+            if (!isAiLoaded) {
+                // Show loading state on FAB
+                aiToggleBtn.innerHTML = '⏳';
+                
+                const script = document.createElement('script');
+                script.src = "{{ url_for('static', filename='js/ai.js') }}";
+                script.onload = () => {
+                    isAiLoaded = true;
+                    // Initialize AI
+                    window.aiAssistant = new window.AIAssistant({
+                        csrfToken: '{{ csrf_token() }}',
+                        easymde: easymde,
+                        endpoints: {
+                            generate: '{{ url_for("ai.api_generate") }}',
+                            summarize: '{{ url_for("ai.api_summarize") }}',
+                            questions: '{{ url_for("ai.api_questions") }}',
+                            explain: '{{ url_for("ai.api_explain") }}',
+                            chat: '{{ url_for("ai.api_chat") }}'
+                        }
+                    });
+                    
+                    showSidebar();
+                };
+                script.onerror = () => {
+                    aiToggleBtn.innerHTML = '✨';
+                    alert("Failed to load AI Assistant. Please check your connection.");
+                };
+                document.body.appendChild(script);
+            } else {
+                showSidebar();
             }
-            
-            if (onSuccess) onSuccess(data.result);
-            else if (resultBox) {
-                // simple render
-                resultBox.style.display = 'block';
-                // replace newlines with br for simple markdown preview or leave as raw
-                let formatted = data.result.replace(/\ng/, '<br>');
-                // very simple bolding rule
-                formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-                resultBox.innerHTML = formatted;
-            }
-            
-        } catch(e) {
-            loader.style.display = 'none';
-            alert("Network error processing AI request.");
+        } else {
+            hideSidebar();
         }
     }
 
-    // 1. Generate Notes
-    document.getElementById('btn-ai-generate').addEventListener('click', () => {
-        const topic = document.getElementById('ai-topic-input').value.trim();
-        if (!topic) return alert('Please enter a topic.');
-        
-        runAiRequest('{{ url_for("ai.api_generate") }}', { topic: topic }, 'loader-generate', null, (result) => {
-            const cm = easymde.codemirror;
-            const currentVal = cm.getValue();
-            const newVal = currentVal + (currentVal ? '\n\n' : '') + result;
-            cm.setValue(newVal);
-            
-            // Trigger change emit manually if required, but EasyMDE handles 'change'
-            document.getElementById('ai-topic-input').value = '';
-        });
-    });
+    function showSidebar() {
+        isAiVisible = true;
+        aiSidebarContainer.classList.remove('hidden');
+        aiSidebarContainer.classList.add('active-mobile');
+        editorLayout.classList.add('ai-active');
+        aiToggleBtn.innerHTML = '✖'; // Change icon to close
+    }
 
-    // 2. Action Helpers
-    const ctxResult = document.getElementById('ai-context-result');
-    
-    document.getElementById('btn-ai-summarize').addEventListener('click', () => {
-        const content = easymde.value();
-        if (!content.trim()) return alert("Editor is empty.");
-        runAiRequest('{{ url_for("ai.api_summarize") }}', { content: content }, 'loader-context', 'ai-context-result');
-    });
+    function hideSidebar() {
+        isAiVisible = false;
+        aiSidebarContainer.classList.add('hidden');
+        aiSidebarContainer.classList.remove('active-mobile');
+        editorLayout.classList.remove('ai-active');
+        aiToggleBtn.innerHTML = '✨'; // Revert back to magic wand
+    }
 
-    document.getElementById('btn-ai-questions').addEventListener('click', () => {
-        const content = easymde.value();
-        if (!content.trim()) return alert("Editor is empty.");
-        runAiRequest('{{ url_for("ai.api_questions") }}', { content: content }, 'loader-context', 'ai-context-result', (result) => {
-            ctxResult.style.display = 'block';
-            const mapped = result.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-            ctxResult.innerHTML = mapped + `<br><br><button class="btn btn-sm btn-outline mt-2" onclick="easymde.codemirror.setValue(easymde.value() + '\\n\\n' + this.getAttribute('data-raw'))" data-raw="${encodeURIComponent(result)}">Insert into note</button>`;
-        });
-    });
-
-    // Handle button insertion from the innerHTML injected above
-    ctxResult.addEventListener('click', (e) => {
-        if(e.target.tagName === 'BUTTON' && e.target.hasAttribute('data-raw')) {
-            const raw = decodeURIComponent(e.target.getAttribute('data-raw'));
-            easymde.codemirror.setValue(easymde.value() + "\n\n" + raw);
-        }
-    });
-
-    document.getElementById('btn-ai-explain').addEventListener('click', () => {
-        const text = easymde.codemirror.getSelection();
-        if(!text) return alert("Please highlight text in the editor first.");
-        runAiRequest('{{ url_for("ai.api_explain") }}', { text: text, is_code: false }, 'loader-context', 'ai-context-result');
-    });
-
-    document.getElementById('btn-ai-explain-code').addEventListener('click', () => {
-        const text = easymde.codemirror.getSelection();
-        if(!text) return alert("Please highlight code snippet in the editor first.");
-        runAiRequest('{{ url_for("ai.api_explain") }}', { text: text, is_code: true }, 'loader-context', 'ai-context-result');
-    });
-
-    // 3. Chat Logic
-    document.getElementById('btn-ai-chat').addEventListener('click', () => {
-        const inputField = document.getElementById('ai-chat-input');
-        const query = inputField.value.trim();
-        const content = easymde.value();
-        const historyBox = document.getElementById('ai-chat-history');
-        
-        if (!query) return;
-        
-        // Append user query
-        historyBox.innerHTML += `<div style="margin-bottom: 8px;"><b>You:</b> ${query}</div>`;
-        historyBox.scrollTop = historyBox.scrollHeight;
-        inputField.value = '';
-        
-        runAiRequest('{{ url_for("ai.api_chat") }}', { query: query, context: content }, 'loader-chat', null, (result) => {
-             const mapped = result.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-             historyBox.innerHTML += `<div style="margin-bottom: 12px; color: var(--accent-secondary);"><b>AI:</b> ${mapped}</div>`;
-             historyBox.scrollTop = historyBox.scrollHeight;
-        });
-    });
-
-    // Allow Enter key in chat
-    document.getElementById('ai-chat-input').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            document.getElementById('btn-ai-chat').click();
-        }
-    });
-
+    // Attach Toggle
+    aiToggleBtn.addEventListener('click', toggleAiSidebar);
+    aiCloseMobile.addEventListener('click', hideSidebar);
 
 });
 </script>
