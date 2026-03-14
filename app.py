@@ -5,7 +5,6 @@ from flask_wtf.csrf import CSRFProtect
 
 from config import Config
 from models import db, User
-from extensions import socketio
 
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -36,7 +35,6 @@ def create_app():
     db.init_app(app)
     login_manager.init_app(app)
     limiter.init_app(app)
-    socketio.init_app(app, cors_allowed_origins="*")
 
     # Flask-Login loader
     @login_manager.user_loader
@@ -83,13 +81,11 @@ def create_app():
 
         return dict(unread_notifications_count=0)
 
-    # Import socket events
-    import socket_events
-
-    # Database initialization
-    with app.app_context():
+    # Create CLI command to init DB
+    @app.cli.command("init-db")
+    def init_db():
+        """Initialize the database and create a default admin."""
         try:
-
             db.create_all()
 
             admin_username = os.environ.get("ADMIN_USERNAME", "admin")
@@ -99,28 +95,21 @@ def create_app():
             admin = User.query.filter_by(username=admin_username).first()
 
             if admin is None:
-
                 admin = User(
                     username=admin_username,
                     email=admin_email,
                     is_admin=True
                 )
-
                 admin.set_password(admin_password)
                 db.session.add(admin)
                 db.session.commit()
-
                 print("Admin user created")
-
             else:
-
                 admin.set_password(admin_password)
                 db.session.commit()
-
                 print("Admin password synced")
 
         except Exception as e:
-
             db.session.rollback()
             print("Database initialization error:", e)
 

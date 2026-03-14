@@ -7,7 +7,6 @@ from sqlalchemy import or_
 from models import db, ClassNote, ClassNoteHistory, Comment, NoteLike, User, Notification
 from forms import ClassNoteForm, CommentForm, SearchForm
 from utils import log_activity
-from extensions import socketio
 from datetime import datetime, timezone
 
 notes_bp = Blueprint('notes', __name__, url_prefix='/notes')
@@ -96,10 +95,6 @@ def edit_note(note_id):
         note.content = form.content.data
         note.updated_at = datetime.now(timezone.utc)
         
-        # Sync the real-time buffer inline to prevent staleness on hard submits
-        from events import note_buffers
-        note_buffers[note.id] = note.content
-        
         log_activity(current_user.id, 'edit_note', 'note', note.id,
                      f'{current_user.username} edited the Class Note "{note.title}"')
         db.session.commit()
@@ -166,9 +161,6 @@ def comment_note(note_id):
         log_activity(current_user.id, 'comment', 'comment', comment.id,
                      f'{current_user.username} commented on Class Note "{note.title}"')
         db.session.commit()
-        
-        if note_author and note_author.id != current_user.id:
-            socketio.emit('new_notification', {'count_increment': 1}, room=f"user_{note_author.id}")
             
         flash('Comment posted!', 'success')
     return redirect(url_for('notes.detail', note_id=note.id))
@@ -196,9 +188,6 @@ def toggle_like(note_id):
             db.session.add(notif)
             
         db.session.commit()
-        
-        if note_author and note_author.id != current_user.id:
-            socketio.emit('new_notification', {'count_increment': 1}, room=f"user_{note_author.id}")
             
         log_activity(current_user.id, 'like_note', 'note', note.id,
                      f'{current_user.username} liked the Class Note "{note.title}"')

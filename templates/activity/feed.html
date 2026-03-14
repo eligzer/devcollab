@@ -30,48 +30,4 @@
 </div>
 {% endblock %}
 
-{% block extra_scripts %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    if (typeof socket !== 'undefined' && socket) {
-        socket.on('new_activity', function(data) {
-            const timeline = document.querySelector('.activity-timeline');
-            if (!timeline) {
-                // If the feed was previously empty, we might need to reload or create the timeline container.
-                window.location.reload();
-                return;
-            }
-
-            const newActivity = document.createElement('div');
-            newActivity.className = 'activity-item animate-in';
-            newActivity.style.display = 'flex';
-            newActivity.style.gap = '1rem';
-            newActivity.style.alignItems = 'flex-start';
-            newActivity.style.marginBottom = '1.5rem';
-            newActivity.style.padding = '1rem';
-            newActivity.style.background = 'var(--bg-card)';
-            newActivity.style.borderRadius = '8px';
-            newActivity.style.border = '1px solid var(--border-color)';
-            
-            newActivity.innerHTML = `
-                <div style="flex-shrink: 0;">
-                    <img src="/static/profile_pics/${data.profile_image}" alt="Avatar" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover;">
-                </div>
-                <div class="activity-content" style="flex-grow: 1;">
-                    <p style="margin: 0; font-weight: bold;"><a href="/user/${data.username}" style="color: var(--accent); text-decoration: none;">${data.username}</a></p>
-                    <p class="activity-desc" style="margin: 5px 0; color: var(--text-main);">${data.description}</p>
-                    <span class="activity-time" style="font-size: 0.85rem; color: var(--text-muted);">${data.created_at}</span>
-                </div>
-            `;
-            
-            timeline.insertBefore(newActivity, timeline.firstChild);
-            
-            // Optionally, remove the last item if the list gets too long
-            if (timeline.children.length > 50) {
-                timeline.removeChild(timeline.lastChild);
-            }
-        });
-    }
-});
-</script>
 {% endblock %}

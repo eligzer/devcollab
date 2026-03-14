@@ -86,40 +86,7 @@
     </footer>
 
     {% block extra_scripts %}{% endblock %}
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
     <script>
-        {% if current_user.is_authenticated %}
-            // Global socket instance for authenticated users
-            const socket = io();
-            
-            socket.on('connect', () => {
-                console.log('Connected to real-time server');
-            });
-
-            // Listen for new notifications to badge UI
-            socket.on('new_notification', function() {
-                const badge = document.getElementById('notif-badge');
-                if (badge) {
-                    let currentCount = parseInt(badge.textContent || '0');
-                    badge.textContent = currentCount + 1;
-                    badge.style.display = 'flex';
-                }
-            });
-            
-            socket.on('user_online', function(data) {
-                console.log('User online:', data.user_id);
-                // Can be wired to UI to show green dots
-            });
-            
-            socket.on('user_offline', function(data) {
-                console.log('User offline:', data.user_id);
-                // Can be wired to UI to hide green dots
-            });
-        {% else %}
-            const socket = null;
-        {% endif %}
-
         document.addEventListener('DOMContentLoaded', function() {
             const userDropdown = document.querySelector('.nav-item.dropdown');
             if (userDropdown) {

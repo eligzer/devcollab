@@ -1,3 +1,1 @@
-from flask_socketio import SocketIO
-
-socketio = SocketIO()
+# No extensions.py currently since we're removing socketio

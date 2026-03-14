@@ -76,39 +76,6 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
 
         chatBox.appendChild(msgDiv);
-        chatBox.scrollTop = chatBox.scrollHeight;
-    }
-
-    if (socket) {
-        // Handle form submission via socket
-        messageForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            const content = messageInput.value.trim();
-            if (!content) return;
-
-            // Optimistically or safely emit
-            socket.emit('send_message', {
-                receiver: receiverUsername,
-                content: content
-            }, function(response) {
-                if (response.status === 'success') {
-                    // Append our own message
-                    appendMessage(response.message, true);
-                    messageInput.value = '';
-                } else {
-                    alert('Error sending message: ' + response.message);
-                }
-            });
-        });
-
-        // Listen for incoming messages
-        socket.on('new_message', function(msgData) {
-            // Only append if it's from the person we are chatting with
-            if (msgData.sender_id !== currentUserId && msgData.sender_username === receiverUsername) {
-                appendMessage(msgData, false);
-            }
-        });
-    }
 });
 </script>
 {% endblock %}

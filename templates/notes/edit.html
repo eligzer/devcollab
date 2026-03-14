@@ -12,11 +12,9 @@
     
     <!-- Left Column: Editor -->
     <div>
-        <!-- Active Editors Ribbon -->
     <div id="active-editors-strip" class="glass-card animate-in" style="display: flex; align-items: center; gap: 0.5rem; padding: 10px 15px; margin-bottom: 1rem; border-radius: 8px;">
         <strong style="margin-right: 10px; font-size: 0.9rem;">🟢 Active Editors:</strong>
         <div id="active-editors-list" style="display: flex; gap: -5px; flex-wrap: wrap;">
-            <!-- Avatars injected here -->
             <span class="text-muted text-sm" style="font-style: italic;">Just you</span>
         </div>
     </div>
@@ -26,10 +24,6 @@
             <div>
                 <h2 style="margin-bottom: 0;">Edit Note</h2>
                 <p class="form-subtitle">Updating <strong>{{ note.title }}</strong></p>
-            </div>
-            <!-- Edit Status Text -->
-            <div id="edit-conflict-status" style="font-size: 0.85rem; color: var(--accent); opacity: 0; transition: opacity 0.3s ease; font-weight: bold;">
-                Someone is typing...
             </div>
         </div>
 
@@ -124,9 +118,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const easymde = new EasyMDE({
         element: document.getElementById('edit-note-content'),
         spellChecker: false,
-        autosave: {
-            enabled: false, // We'll handle custom socket auto-save
-        },
         maxHeight: "450px",
         toolbar: ["bold", "italic", "heading", "|", "quote", "unordered-list", "ordered-list", "|", "link", "image", "code", "table", "|", "preview", "side-by-side", "fullscreen", "|", "guide"]
     });
@@ -191,20 +182,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // --- Collaborative Socket Logic (Externalized) ---
-    </script>
-    <script src="{{ url_for('static', filename='js/collaboration.js') }}"></script>
-    <script>
-    const NOTE_ID = {{ note.id }};
-    if (window.socket) {
-        window.collaborationManager = new window.CollaborationManager({
-            socket: window.socket,
-            noteId: NOTE_ID,
-            easymde: easymde
-        });
-    }
 
-    // --- Optional AI Lazy Loading Logic ---
     const aiToggleBtn = document.getElementById('auto-ai-toggle');
     const aiSidebarContainer = document.getElementById('ai-sidebar-container');
     const editorLayout = document.getElementById('editor-layout');

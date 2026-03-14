@@ -7,7 +7,6 @@ from flask_login import login_required, current_user
 from models import db, User, ClassNote, UserLink, Follow, Notification
 from forms import EditProfileForm, UserLinkForm
 from utils import log_activity
-from extensions import socketio
 
 
 user_bp = Blueprint("user", __name__)
@@ -193,12 +192,6 @@ def follow(username):
         db.session.add(notif)
 
         db.session.commit()
-
-        socketio.emit(
-            "new_notification",
-            {"count_increment": 1},
-            room=f"user_{user.id}"
-        )
 
         log_activity(
             current_user.id,

@@ -6,7 +6,5 @@ email_validator==2.2.0
 Pygments==2.19.1
 gunicorn==25.1.0
 psycopg2-binary>=2.9.9
-Flask-SocketIO==5.3.6
 google-generativeai==0.8.6
 Flask-Limiter==4.1.1
-eventlet>=0.35.2

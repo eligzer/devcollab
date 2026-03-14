@@ -2,7 +2,6 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
 from models import db, Message, User, Notification
 from utils import log_activity
-from extensions import socketio
 
 messages_bp = Blueprint('messages', __name__, url_prefix='/messages')
 
@@ -75,8 +74,6 @@ def send_message(username):
     db.session.add(notif)
     
     db.session.commit()
-    
-    socketio.emit('new_notification', {'count_increment': 1}, room=f"user_{other_user.id}")
     
     log_activity(current_user.id, 'send_message', 'message', msg.id, f'{current_user.username} sent a message to {other_user.username}')
     
