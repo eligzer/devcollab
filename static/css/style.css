@@ -1366,3 +1366,24 @@ select.form-control {
 }
 
 
+
+/* PROFILE PAGE FIX */
+
+.profile-card{
+    width:100%;
+    max-width:720px;
+    margin:40px auto;
+}
+
+.profile-header{
+    display:flex;
+    align-items:center;
+    gap:20px;
+    flex-wrap:wrap;
+}
+
+.profile-header img{
+    width:80px;
+    height:80px;
+    border-radius:50%;
+}
