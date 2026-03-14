@@ -70,7 +70,7 @@ def create_note():
 def detail(note_id):
     note = ClassNote.query.get_or_404(note_id)
     last_edit = note.history[0] if note.history else None
-    comments = note.comments.order_by(Comment.created_at.asc()).all()
+    comments = sorted(note.comments, key=lambda c: c.created_at)
     comment_form = CommentForm()
     return render_template('notes/detail.html', note=note, last_edit=last_edit,
                            comments=comments, comment_form=comment_form)
