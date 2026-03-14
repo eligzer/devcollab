@@ -1,47 +1,82 @@
 import os
-from flask import Flask
+import logging
+
+from flask import Flask, render_template
 from flask_login import LoginManager, current_user
 from flask_wtf.csrf import CSRFProtect
 
 from config import Config
-from models import db, User
+from models import db, User, Notification
 
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
-# Rate limiter
-limiter = Limiter(key_func=get_remote_address)
 
-# Login manager
+# ----------------------------
+# Extensions
+# ----------------------------
+
 login_manager = LoginManager()
-login_manager.login_view = "auth.login"
-login_manager.login_message_category = "info"
+csrf = CSRFProtect()
 
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"]
+)
+
+
+# ----------------------------
+# Application Factory
+# ----------------------------
 
 def create_app():
 
     app = Flask(__name__)
     app.config.from_object(Config)
 
-    # Upload folder
+    # ----------------------------
+    # Logging
+    # ----------------------------
+
+    logging.basicConfig(level=logging.INFO)
+    app.logger.setLevel(logging.INFO)
+
+    # ----------------------------
+    # Upload Folder Setup
+    # ----------------------------
+
     upload_folder = os.path.join(app.root_path, "static", "profile_pics")
     os.makedirs(upload_folder, exist_ok=True)
     app.config["UPLOAD_FOLDER"] = upload_folder
 
-    # Security
-    CSRFProtect(app)
+    # ----------------------------
+    # Initialize Extensions
+    # ----------------------------
 
-    # Initialize extensions
     db.init_app(app)
     login_manager.init_app(app)
+    csrf.init_app(app)
     limiter.init_app(app)
 
-    # Flask-Login loader
+    login_manager.login_view = "auth.login"
+    login_manager.login_message_category = "info"
+
+    # ----------------------------
+    # Flask-Login Loader
+    # ----------------------------
+
     @login_manager.user_loader
     def load_user(user_id):
-        return User.query.get(int(user_id))
+        try:
+            return User.query.get(int(user_id))
+        except Exception as e:
+            app.logger.error(f"User loader error: {e}")
+            return None
 
-    # Import blueprints
+    # ----------------------------
+    # Register Blueprints
+    # ----------------------------
+
     from routes.main import main_bp
     from routes.auth import auth_bp
     from routes.projects import projects_bp
@@ -53,7 +88,6 @@ def create_app():
     from routes.messages import messages_bp
     from routes.ai import ai_bp
 
-    # Register blueprints
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(projects_bp)
@@ -65,26 +99,47 @@ def create_app():
     app.register_blueprint(messages_bp)
     app.register_blueprint(ai_bp)
 
-    # Notification count injector
+    # ----------------------------
+    # Notification Count Injector
+    # ----------------------------
+
     @app.context_processor
     def inject_notifications():
 
         if current_user.is_authenticated:
-            from models import Notification
-
-            count = Notification.query.filter_by(
-                user_id=current_user.id,
-                is_read=False
-            ).count()
-
-            return dict(unread_notifications_count=count)
+            try:
+                count = Notification.query.filter_by(
+                    user_id=current_user.id,
+                    is_read=False
+                ).count()
+                return dict(unread_notifications_count=count)
+            except Exception as e:
+                app.logger.error(f"Notification query error: {e}")
+                return dict(unread_notifications_count=0)
 
         return dict(unread_notifications_count=0)
 
-    # Create CLI command to init DB
+    # ----------------------------
+    # Error Handlers
+    # ----------------------------
+
+    @app.errorhandler(404)
+    def page_not_found(error):
+        return render_template("errors/404.html"), 404
+
+    @app.errorhandler(500)
+    def internal_server_error(error):
+        db.session.rollback()
+        return render_template("errors/500.html"), 500
+
+    # ----------------------------
+    # CLI Command: Initialize DB
+    # ----------------------------
+
     @app.cli.command("init-db")
     def init_db():
-        """Initialize the database and create a default admin."""
+        """Initialize database and create default admin."""
+
         try:
             db.create_all()
 
@@ -94,19 +149,23 @@ def create_app():
 
             admin = User.query.filter_by(username=admin_username).first()
 
-            if admin is None:
+            if not admin:
                 admin = User(
                     username=admin_username,
                     email=admin_email,
                     is_admin=True
                 )
+
                 admin.set_password(admin_password)
                 db.session.add(admin)
                 db.session.commit()
+
                 print("Admin user created")
+
             else:
                 admin.set_password(admin_password)
                 db.session.commit()
+
                 print("Admin password synced")
 
         except Exception as e:
@@ -116,5 +175,12 @@ def create_app():
     return app
 
 
-# Create app instance for Gunicorn
+# ----------------------------
+# App Instance (for Gunicorn)
+# ----------------------------
+
 app = create_app()
+
+
+if __name__ == "__main__":
+    app.run(debug=True)
