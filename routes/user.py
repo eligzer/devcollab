@@ -51,10 +51,9 @@ def profile(username):
 @login_required
 def edit_profile():
 
-    form = EditProfileForm(obj=current_user)
+    form = EditProfileForm(current_user.username, obj=current_user)
 
     if form.validate_on_submit():
-
         try:
 
             pic_file = form.profile_image.data
@@ -68,7 +67,6 @@ def edit_profile():
                 if ext in allowed_extensions:
 
                     filename = secure_filename(pic_file.filename)
-
                     unique_filename = f"{uuid.uuid4()}_{filename}"
 
                     filepath = os.path.join(
@@ -90,24 +88,13 @@ def edit_profile():
 
             db.session.commit()
 
-            log_activity(
-                current_user.id,
-                "update_profile",
-                "user",
-                current_user.id,
-                f"{current_user.username} updated profile"
-            )
-
             flash("Profile updated successfully.", "success")
 
             return redirect(url_for("user.profile", username=current_user.username))
 
         except Exception as e:
-
             db.session.rollback()
-
-            print("Edit profile error:", e)
-
+            print(e)
             flash("Error updating profile.", "danger")
 
     return render_template("user/edit_profile.html", form=form)
