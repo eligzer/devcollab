@@ -66,7 +66,7 @@ class User(UserMixin, db.Model):
     notifications = db.relationship("Notification", backref="user", lazy=True)
     pinned_notes = db.relationship("PinnedNote", backref="user", lazy=True)
 
-    activities = db.relationship("Activity", backref="user", lazy=True)
+     
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
