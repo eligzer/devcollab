@@ -33,5 +33,5 @@ def create_project():
 @projects_bp.route('/<int:project_id>')
 def detail(project_id):
     project = Project.query.get_or_404(project_id)
-    snippets = project.snippets.order_by(db.text('created_at DESC')).all()
+    snippets = sorted(project.snippets, key=lambda s: s.created_at, reverse=True)
     return render_template('projects/detail.html', project=project, snippets=snippets)
