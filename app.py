@@ -5,6 +5,8 @@ from flask import Flask, render_template
 from flask_login import LoginManager, current_user
 from flask_wtf.csrf import CSRFProtect
 
+from sqlalchemy import text
+
 from config import Config
 from models import db, User, Notification
 
@@ -62,15 +64,29 @@ def create_app():
     login_manager.login_message_category = "info"
 
     # ----------------------------
-    # AUTO CREATE DATABASE TABLES
-    # (important for Render free tier)
+    # Database Initialization
     # ----------------------------
 
     with app.app_context():
+
         try:
+
+            # Create tables if missing
             db.create_all()
-            app.logger.info("Database tables ensured.")
+
+            # Fix missing notification column
+            db.session.execute(text("""
+                ALTER TABLE notifications
+                ADD COLUMN IF NOT EXISTS link VARCHAR(255)
+            """))
+
+            db.session.commit()
+
+            app.logger.info("Database schema verified.")
+
         except Exception as e:
+
+            db.session.rollback()
             app.logger.error(f"Database initialization error: {e}")
 
     # ----------------------------
@@ -79,8 +95,10 @@ def create_app():
 
     @login_manager.user_loader
     def load_user(user_id):
+
         try:
             return User.query.get(int(user_id))
+
         except Exception as e:
             app.logger.error(f"User loader error: {e}")
             return None
@@ -119,7 +137,9 @@ def create_app():
     def inject_notifications():
 
         if current_user.is_authenticated:
+
             try:
+
                 count = Notification.query.filter_by(
                     user_id=current_user.id,
                     is_read=False
@@ -128,6 +148,7 @@ def create_app():
                 return dict(unread_notifications_count=count)
 
             except Exception as e:
+
                 app.logger.error(f"Notification query error: {e}")
                 return dict(unread_notifications_count=0)
 
@@ -147,7 +168,12 @@ def create_app():
 
     @app.errorhandler(500)
     def internal_server_error(error):
-        db.session.rollback()
+
+        try:
+            db.session.rollback()
+        except:
+            pass
+
         return render_template("errors/500.html"), 500
 
     # ----------------------------
@@ -159,6 +185,7 @@ def create_app():
         """Initialize database and create default admin."""
 
         try:
+
             db.create_all()
 
             admin_username = os.environ.get("ADMIN_USERNAME", "admin")
@@ -190,6 +217,7 @@ def create_app():
                 print("Admin password synced")
 
         except Exception as e:
+
             db.session.rollback()
             print("Database initialization error:", e)
 
