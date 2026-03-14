@@ -64,20 +64,40 @@ def create_app():
     login_manager.login_message_category = "info"
 
     # ----------------------------
-    # Database Initialization
+    # DATABASE AUTO REPAIR
     # ----------------------------
 
     with app.app_context():
 
         try:
 
-            # Create tables if missing
             db.create_all()
 
-            # Fix missing notification column
+            # Fix notifications table
             db.session.execute(text("""
                 ALTER TABLE notifications
                 ADD COLUMN IF NOT EXISTS link VARCHAR(255)
+            """))
+
+            # Fix activity_log schema
+            db.session.execute(text("""
+                ALTER TABLE activity_log
+                ADD COLUMN IF NOT EXISTS action VARCHAR(50)
+            """))
+
+            db.session.execute(text("""
+                ALTER TABLE activity_log
+                ADD COLUMN IF NOT EXISTS target_type VARCHAR(50)
+            """))
+
+            db.session.execute(text("""
+                ALTER TABLE activity_log
+                ADD COLUMN IF NOT EXISTS target_id INTEGER
+            """))
+
+            db.session.execute(text("""
+                ALTER TABLE activity_log
+                ADD COLUMN IF NOT EXISTS description TEXT
             """))
 
             db.session.commit()
@@ -130,7 +150,7 @@ def create_app():
     app.register_blueprint(ai_bp)
 
     # ----------------------------
-    # Notification Count Injector
+    # Notification Counter
     # ----------------------------
 
     @app.context_processor
@@ -177,12 +197,11 @@ def create_app():
         return render_template("errors/500.html"), 500
 
     # ----------------------------
-    # CLI Command: Initialize DB
+    # CLI Command
     # ----------------------------
 
     @app.cli.command("init-db")
     def init_db():
-        """Initialize database and create default admin."""
 
         try:
 
@@ -225,7 +244,7 @@ def create_app():
 
 
 # ----------------------------
-# App Instance (for Gunicorn)
+# App Instance
 # ----------------------------
 
 app = create_app()
