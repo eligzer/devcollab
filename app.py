@@ -5,7 +5,7 @@ from flask import Flask, render_template
 from flask_login import LoginManager, current_user
 from flask_wtf.csrf import CSRFProtect
 from sqlalchemy import text
-from whitenoise import WhiteNoise
+
 
 from config import Config
 from models import db, User, Notification
@@ -36,9 +36,8 @@ def create_app():
     app = Flask(__name__, static_folder="static")
     app.config.from_object(Config)
 
-    # Serve static files in production
-    from whitenoise import WhiteNoise
-    app.wsgi_app = WhiteNoise(app.wsgi_app, root="static/")
+  
+    
 
     # ----------------------------
     # Logging
