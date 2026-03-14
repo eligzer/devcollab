@@ -255,3 +255,15 @@ userMenu.classList.toggle("show")
 
 </body>
 </html>
+
+<script>
+const menuBtn = document.querySelector(".mobile-menu-btn");
+const navLinks = document.querySelector(".navbar-links");
+
+if(menuBtn){
+    menuBtn.addEventListener("click", () => {
+        menuBtn.classList.toggle("is-active");
+        navLinks.classList.toggle("is-active");
+    });
+}
+</script>

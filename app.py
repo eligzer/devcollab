@@ -123,7 +123,7 @@ def create_app():
     def load_user(user_id):
 
         try:
-            return User.query.get(int(user_id))
+            return db.session.get(User, int(user_id))
         except Exception as e:
             app.logger.error(f"User loader error: {e}")
             return None
