@@ -1,35 +1,35 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>{% block title %}DevCollab{% endblock %}</title>
+<title>
+{% block title %}DevCollab{% endblock %}
+</title>
 
-<!-- MAIN CSS -->
-<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 
 </head>
 
+
 <body>
 
-<!-- ========================= -->
+
 <!-- NAVBAR -->
-<!-- ========================= -->
 
 <nav class="navbar">
+
 <div class="navbar-inner">
 
 <a href="{{ url_for('main.index') }}" class="navbar-brand">
-⟨/⟩ DevCollab
+DevCollab
 </a>
 
-<button class="mobile-menu-btn" id="mobileMenuBtn">
-☰
-</button>
 
-<ul class="navbar-links" id="navLinks">
+<ul class="navbar-links">
 
 <li>
 <a href="{{ url_for('projects.list_projects') }}">
@@ -49,21 +49,22 @@ Activity
 </a>
 </li>
 
-<!-- SEARCH -->
+
 <li>
-<form action="{{ url_for('main.search') }}" method="get" class="nav-search">
+
+<form action="{{ url_for('main.search') }}" method="GET">
 
 <input
 type="text"
 name="q"
 placeholder="Search..."
-value="{{ request.args.get('q','') }}"
->
+class="form-control"
+style="width:180px;">
 
 </form>
+
 </li>
 
-{% if current_user.is_authenticated %}
 
 <li>
 <a href="{{ url_for('projects.create_project') }}">
@@ -71,56 +72,34 @@ New Project
 </a>
 </li>
 
-{% if current_user.is_admin %}
+
+{% if current_user.is_authenticated %}
+
 <li>
 <a href="{{ url_for('admin.dashboard') }}">
 Admin
 </a>
 </li>
-{% endif %}
 
-<!-- NOTIFICATIONS -->
 
 <li>
-
-<a href="{{ url_for('user.notifications') }}" class="notif-link">
-
+<a href="{{ url_for('user.notifications') }}">
 🔔
-
-{% if unread_notifications_count > 0 %}
-
-<span class="notif-badge">
-
-{{ unread_notifications_count }}
-
-</span>
-
-{% endif %}
-
 </a>
-
 </li>
 
-<!-- USER DROPDOWN -->
 
-<li class="dropdown">
+<!-- PROFILE DROPDOWN -->
 
-<a href="#" class="user-toggle" id="userToggle">
+<li class="profile-wrapper">
 
 <img
-src="{{ url_for('static', filename='profile_pics/' ~ (current_user.profile_image if current_user.profile_image else 'default.jpg')) }}"
-class="avatar"
->
+src="{{ url_for('static', filename='profile_pics/' + (current_user.profile_image or 'default.jpg')) }}"
+class="profile-avatar"
+onclick="toggleProfileMenu()">
 
-<span>
 
-{{ current_user.username }}
-
-</span>
-
-</a>
-
-<div class="dropdown-menu" id="userMenu">
+<div class="profile-dropdown" id="profileMenu">
 
 <a href="{{ url_for('user.profile', username=current_user.username) }}">
 Profile
@@ -130,7 +109,7 @@ Profile
 Inbox
 </a>
 
-<a href="{{ url_for('user.edit_profile') }}">
+<a href="#">
 Settings
 </a>
 
@@ -146,13 +125,7 @@ Sign Out
 
 <li>
 <a href="{{ url_for('auth.login') }}">
-Sign In
-</a>
-</li>
-
-<li>
-<a href="{{ url_for('auth.register') }}">
-Get Started
+Login
 </a>
 </li>
 
@@ -161,109 +134,81 @@ Get Started
 </ul>
 
 </div>
+
 </nav>
 
-<!-- ========================= -->
+
 <!-- FLASH MESSAGES -->
-<!-- ========================= -->
+
+<div class="container">
 
 {% with messages = get_flashed_messages(with_categories=true) %}
-{% if messages %}
 
-<div class="flash-container">
+{% if messages %}
 
 {% for category, message in messages %}
 
-<div class="flash {{ category }}">
-
+<div class="flash flash-{{ category }}">
 {{ message }}
-
 </div>
 
 {% endfor %}
 
-</div>
-
 {% endif %}
+
 {% endwith %}
 
-<!-- ========================= -->
-<!-- MAIN CONTENT -->
-<!-- ========================= -->
+</div>
 
-<main class="container">
+
+<!-- MAIN CONTENT -->
+
+<div class="container">
 
 {% block content %}
-
 {% endblock %}
 
-</main>
+</div>
 
-<!-- ========================= -->
+
 <!-- FOOTER -->
-<!-- ========================= -->
 
 <footer class="footer">
-
-© 2026 DevCollab
-
+DevCollab © 2026
 </footer>
 
-<!-- ========================= -->
-<!-- SCRIPTS -->
-<!-- ========================= -->
+
+
+<!-- DROPDOWN SCRIPT -->
 
 <script>
 
-document.addEventListener("DOMContentLoaded", function(){
+function toggleProfileMenu(){
 
-/* MOBILE MENU */
+const menu = document.getElementById("profileMenu");
 
-const mobileBtn = document.getElementById("mobileMenuBtn")
-const navLinks = document.getElementById("navLinks")
-
-if(mobileBtn){
-
-mobileBtn.addEventListener("click", function(){
-
-navLinks.classList.toggle("active")
-
-})
+menu.classList.toggle("active");
 
 }
 
-/* USER DROPDOWN */
+document.addEventListener("click",function(e){
 
-const userToggle = document.getElementById("userToggle")
-const userMenu = document.getElementById("userMenu")
+const wrapper = document.querySelector(".profile-wrapper");
 
-if(userToggle){
+if(wrapper && !wrapper.contains(e.target)){
 
-userToggle.addEventListener("click", function(e){
+const menu = document.getElementById("profileMenu");
 
-e.preventDefault()
-
-userMenu.classList.toggle("show")
-
-})
+if(menu){
+menu.classList.remove("active");
+}
 
 }
 
-})
+});
 
 </script>
+
 
 </body>
 </html>
-
-<script>
-const menuBtn = document.querySelector(".mobile-menu-btn");
-const navLinks = document.querySelector(".navbar-links");
-
-if(menuBtn){
-    menuBtn.addEventListener("click", () => {
-        menuBtn.classList.toggle("is-active");
-        navLinks.classList.toggle("is-active");
-    });
-}
-</script>
