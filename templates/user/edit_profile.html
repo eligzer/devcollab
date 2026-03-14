@@ -6,106 +6,97 @@
 
 <div class="container" style="max-width:700px;margin:auto;">
 
-    <h2 style="margin-bottom:25px;">Edit Profile</h2>
+<h2 style="margin-bottom:25px;">Edit Profile</h2>
 
-    <form method="POST" action="{{ url_for('user.edit_profile') }}" enctype="multipart/form-data">
+<form method="POST"
+      action="{{ url_for('user.edit_profile') }}"
+      enctype="multipart/form-data">
 
-        {{ form.hidden_tag() }}
+{{ form.hidden_tag() }}
 
-        <!-- Profile Picture -->
-        <div class="form-group" style="margin-bottom:25px;">
-            <label style="display:block;margin-bottom:10px;font-weight:600;">
-                Profile Picture
-            </label>
+<!-- Profile Image -->
 
-            <img src="{{ url_for('static', filename='profile_pics/' + (current_user.profile_image or 'default.jpg')) }}"
-                alt="Profile" style="width:110px;height:110px;border-radius:50%;object-fit:cover;margin-bottom:15px;">
+<div class="form-group" style="margin-bottom:25px;">
 
-            {{ form.profile_image(class="form-control") }}
+<label style="display:block;margin-bottom:10px;font-weight:600;">
+Profile Picture
+</label>
 
-            {% for error in form.profile_image.errors %}
-            <small style="color:red;">{{ error }}</small>
-            {% endfor %}
-        </div>
+<img src="{{ url_for('static',
+filename='profile_pics/' + (current_user.profile_image or 'default.jpg')) }}"
+style="width:110px;height:110px;border-radius:50%;object-fit:cover;margin-bottom:15px;">
 
+{{ form.profile_image(class="form-control") }}
 
-        <!-- Username -->
-        <div class="form-group" style="margin-bottom:20px;">
-            {{ form.username.label }}
-            {{ form.username(class="form-control") }}
+{% for error in form.profile_image.errors %}
+<small style="color:red;">{{ error }}</small>
+{% endfor %}
 
-            {% for error in form.username.errors %}
-            <small style="color:red;">{{ error }}</small>
-            {% endfor %}
-        </div>
+</div>
 
 
-        <!-- Bio -->
-        <div class="form-group" style="margin-bottom:20px;">
-            {{ form.bio.label }}
-            {{ form.bio(class="form-control", rows=4, placeholder="Tell people about yourself...") }}
+<!-- Username -->
 
-            {% for error in form.bio.errors %}
-            <small style="color:red;">{{ error }}</small>
-            {% endfor %}
-        </div>
+<div class="form-group" style="margin-bottom:20px;">
 
+{{ form.username.label }}
 
-        <!-- Custom Links Section -->
-        <hr style="margin:30px 0;">
-        <h3 style="margin-bottom:15px;">Profile Links</h3>
+{{ form.username(class="form-control") }}
 
-        <p style="color:#888;margin-bottom:15px;">
-            Add links like Portfolio, LinkedIn, Twitter, GitHub, Blog, etc.
-        </p>
+{% for error in form.username.errors %}
+<small style="color:red;">{{ error }}</small>
+{% endfor %}
 
-        <div class="form-group" style="margin-bottom:10px;">
-            {{ form.link_title.label }}
-            {{ form.link_title(class="form-control", placeholder="Example: Portfolio / LinkedIn / Blog") }}
-        </div>
-
-        <div class="form-group" style="margin-bottom:20px;">
-            {{ form.link_url.label }}
-            {{ form.link_url(class="form-control", placeholder="https://example.com") }}
-        </div>
+</div>
 
 
-        <!-- Save Button -->
-        <div style="margin-top:25px;display:flex;gap:10px;flex-wrap:wrap;">
+<!-- Bio -->
 
-            {{ form.submit(class="btn btn-primary") }}
+<div class="form-group" style="margin-bottom:20px;">
 
-            <a href="{{ url_for('user.profile', username=current_user.username) }}" class="btn btn-secondary">
-                Cancel
-            </a>
+{{ form.bio.label }}
 
-        </div>
+{{ form.bio(class="form-control", rows=4,
+placeholder="Tell people about yourself...") }}
 
-    </form>
+{% for error in form.bio.errors %}
+<small style="color:red;">{{ error }}</small>
+{% endfor %}
+
+</div>
 
 
-    <!-- Account Section -->
-    <hr style="margin:40px 0;">
+<!-- GitHub -->
 
-    <h3>Account</h3>
+<div class="form-group" style="margin-bottom:20px;">
 
-    <div style="margin-top:15px;display:flex;gap:10px;flex-wrap:wrap;">
+{{ form.github_link.label }}
 
-        {% if current_user.is_authenticated %}
+{{ form.github_link(class="form-control",
+placeholder="https://github.com/username") }}
 
-        <a href="{{ url_for('auth.logout') }}" class="btn btn-danger">
-            Sign Out
-        </a>
+{% for error in form.github_link.errors %}
+<small style="color:red;">{{ error }}</small>
+{% endfor %}
 
-        {% else %}
+</div>
 
-        <a href="{{ url_for('auth.login') }}" class="btn btn-primary">
-            Sign In
-        </a>
 
-        {% endif %}
+<div style="margin-top:25px;display:flex;gap:10px;flex-wrap:wrap;">
 
-    </div>
+{{ form.submit(class="btn btn-primary") }}
+
+<a href="{{ url_for('user.profile',
+username=current_user.username) }}"
+class="btn btn-outline">
+
+Cancel
+
+</a>
+
+</div>
+
+</form>
 
 </div>
 
