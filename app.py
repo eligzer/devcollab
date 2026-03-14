@@ -62,6 +62,18 @@ def create_app():
     login_manager.login_message_category = "info"
 
     # ----------------------------
+    # AUTO CREATE DATABASE TABLES
+    # (important for Render free tier)
+    # ----------------------------
+
+    with app.app_context():
+        try:
+            db.create_all()
+            app.logger.info("Database tables ensured.")
+        except Exception as e:
+            app.logger.error(f"Database initialization error: {e}")
+
+    # ----------------------------
     # Flask-Login Loader
     # ----------------------------
 
@@ -112,7 +124,9 @@ def create_app():
                     user_id=current_user.id,
                     is_read=False
                 ).count()
+
                 return dict(unread_notifications_count=count)
+
             except Exception as e:
                 app.logger.error(f"Notification query error: {e}")
                 return dict(unread_notifications_count=0)
@@ -154,6 +168,7 @@ def create_app():
             admin = User.query.filter_by(username=admin_username).first()
 
             if not admin:
+
                 admin = User(
                     username=admin_username,
                     email=admin_email,
@@ -161,12 +176,14 @@ def create_app():
                 )
 
                 admin.set_password(admin_password)
+
                 db.session.add(admin)
                 db.session.commit()
 
                 print("Admin user created")
 
             else:
+
                 admin.set_password(admin_password)
                 db.session.commit()
 
