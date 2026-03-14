@@ -4,8 +4,8 @@ import logging
 from flask import Flask, render_template
 from flask_login import LoginManager, current_user
 from flask_wtf.csrf import CSRFProtect
-from sqlalchemy import text
 
+from sqlalchemy import text
 
 from config import Config
 from models import db, User, Notification
@@ -14,12 +14,15 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
 
+
 # ----------------------------
 # Extensions
 # ----------------------------
 
 login_manager = LoginManager()
 csrf = CSRFProtect()
+
+from extensions import socketio
 
 limiter = Limiter(
     key_func=get_remote_address,
@@ -41,8 +44,6 @@ def create_app():
     )
 
     app.config.from_object(Config)
-  
-    
 
     # ----------------------------
     # Logging
@@ -52,11 +53,12 @@ def create_app():
     app.logger.setLevel(logging.INFO)
 
     # ----------------------------
-    # Upload Folder Setup
+    # Upload Folder
     # ----------------------------
 
     upload_folder = os.path.join(app.root_path, "static", "profile_pics")
     os.makedirs(upload_folder, exist_ok=True)
+
     app.config["UPLOAD_FOLDER"] = upload_folder
 
     # ----------------------------
@@ -67,12 +69,13 @@ def create_app():
     login_manager.init_app(app)
     csrf.init_app(app)
     limiter.init_app(app)
+    socketio.init_app(app)
 
     login_manager.login_view = "auth.login"
     login_manager.login_message_category = "info"
 
     # ----------------------------
-    # DATABASE AUTO REPAIR
+    # Database Initialization
     # ----------------------------
 
     with app.app_context():
@@ -81,30 +84,41 @@ def create_app():
 
             db.create_all()
 
-            db.session.execute(text("""
-                ALTER TABLE notifications
-                ADD COLUMN IF NOT EXISTS link VARCHAR(255)
-            """))
+            # safe migration checks
+            try:
+                db.session.execute(text(
+                    "ALTER TABLE notifications ADD COLUMN link VARCHAR(255)"
+                ))
+            except:
+                pass
 
-            db.session.execute(text("""
-                ALTER TABLE activity_log
-                ADD COLUMN IF NOT EXISTS action VARCHAR(50)
-            """))
+            try:
+                db.session.execute(text(
+                    "ALTER TABLE activity_log ADD COLUMN action VARCHAR(50)"
+                ))
+            except:
+                pass
 
-            db.session.execute(text("""
-                ALTER TABLE activity_log
-                ADD COLUMN IF NOT EXISTS target_type VARCHAR(50)
-            """))
+            try:
+                db.session.execute(text(
+                    "ALTER TABLE activity_log ADD COLUMN target_type VARCHAR(50)"
+                ))
+            except:
+                pass
 
-            db.session.execute(text("""
-                ALTER TABLE activity_log
-                ADD COLUMN IF NOT EXISTS target_id INTEGER
-            """))
+            try:
+                db.session.execute(text(
+                    "ALTER TABLE activity_log ADD COLUMN target_id INTEGER"
+                ))
+            except:
+                pass
 
-            db.session.execute(text("""
-                ALTER TABLE activity_log
-                ADD COLUMN IF NOT EXISTS description TEXT
-            """))
+            try:
+                db.session.execute(text(
+                    "ALTER TABLE activity_log ADD COLUMN description TEXT"
+                ))
+            except:
+                pass
 
             db.session.commit()
 
@@ -187,9 +201,11 @@ def create_app():
     def forbidden(error):
         return render_template("errors/403.html"), 403
 
+
     @app.errorhandler(404)
     def page_not_found(error):
         return render_template("errors/404.html"), 404
+
 
     @app.errorhandler(500)
     def internal_server_error(error):
@@ -205,18 +221,69 @@ def create_app():
 
 
 # ----------------------------
-# App Instance
+# Create App
 # ----------------------------
 
 app = create_app()
 
 
 # ----------------------------
-# Local Development
+# SocketIO Events
+# ----------------------------
+
+@socketio.on("join_chat")
+def handle_join(data):
+
+    room = data["room"]
+    join_room(room)
+
+
+@socketio.on("send_message")
+def handle_send(data):
+
+    room = data["room"]
+
+    socketio.emit(
+        "receive_message",
+        {
+            "username": data["username"],
+            "message": data["message"]
+        },
+        room=room
+    )
+
+@socketio.on("typing")
+def handle_typing(data):
+
+    socketio.emit(
+        "user_typing",
+        {
+            "username": data["username"]
+        },
+        room=data["room"],
+        include_self=False
+    )
+
+
+@socketio.on("stop_typing")
+def handle_stop_typing(data):
+
+    socketio.emit(
+        "user_stop_typing",
+        {},
+        room=data["room"],
+        include_self=False
+    )
+
+# ----------------------------
+# Run Server
 # ----------------------------
 
 if __name__ == "__main__":
-    app.run(
+
+    socketio.run(
+        app,
         host="0.0.0.0",
-        port=int(os.environ.get("PORT", 10000))
+        port=int(os.environ.get("PORT", 10000)),
+        debug=True
     )
