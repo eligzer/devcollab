@@ -10,7 +10,7 @@
 {% block title %}DevCollab{% endblock %}
 </title>
 
-<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 
 </head>
 
@@ -96,7 +96,7 @@ Admin
 <img
 src="{{ url_for('static', filename='profile_pics/' + (current_user.profile_image or 'default.jpg')) }}"
 class="profile-avatar"
-onclick="toggleProfileMenu()">
+class="profile-avatar">
 
 
 <div class="profile-dropdown" id="profileMenu">
@@ -179,35 +179,11 @@ DevCollab © 2026
 
 
 
-<!-- DROPDOWN SCRIPT -->
+<!-- load JS -->
+<script src="{{ url_for('static', filename='js/profile.js') }}"></script>
 
-<script>
-
-function toggleProfileMenu(){
-
-const menu = document.getElementById("profileMenu");
-
-menu.classList.toggle("active");
-
-}
-
-document.addEventListener("click",function(e){
-
-const wrapper = document.querySelector(".profile-wrapper");
-
-if(wrapper && !wrapper.contains(e.target)){
-
-const menu = document.getElementById("profileMenu");
-
-if(menu){
-menu.classList.remove("active");
-}
-
-}
-
-});
-
-</script>
+</body>
+</html>
 
 
 </body>
