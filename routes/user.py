@@ -1,7 +1,7 @@
 import os
 import uuid
 
-from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app
+from flask import Blueprint, render_template, redirect, url_for, flash, current_app
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 
@@ -51,22 +51,32 @@ def profile(username):
 @login_required
 def edit_profile():
 
+    # IMPORTANT: pass original username
     form = EditProfileForm(current_user.username, obj=current_user)
 
     if form.validate_on_submit():
+
         try:
+
+            # ----------------------------
+            # Profile Image Upload
+            # ----------------------------
 
             pic_file = form.profile_image.data
 
-            if pic_file and hasattr(pic_file, "filename") and pic_file.filename != "":
+            if pic_file and pic_file.filename:
 
                 allowed_extensions = {"png", "jpg", "jpeg", "gif"}
 
-                ext = pic_file.filename.rsplit(".", 1)[1].lower()
+                if "." in pic_file.filename:
+                    ext = pic_file.filename.rsplit(".", 1)[1].lower()
+                else:
+                    ext = ""
 
                 if ext in allowed_extensions:
 
                     filename = secure_filename(pic_file.filename)
+
                     unique_filename = f"{uuid.uuid4()}_{filename}"
 
                     filepath = os.path.join(
@@ -82,6 +92,10 @@ def edit_profile():
                     flash("Invalid image format.", "danger")
                     return redirect(url_for("user.edit_profile"))
 
+            # ----------------------------
+            # Update Profile Fields
+            # ----------------------------
+
             current_user.username = form.username.data
             current_user.bio = form.bio.data
             current_user.github_link = form.github_link.data
@@ -93,8 +107,10 @@ def edit_profile():
             return redirect(url_for("user.profile", username=current_user.username))
 
         except Exception as e:
+
             db.session.rollback()
-            print(e)
+            current_app.logger.error(f"Profile update error: {e}")
+
             flash("Error updating profile.", "danger")
 
     return render_template("user/edit_profile.html", form=form)
@@ -132,9 +148,10 @@ def add_link():
 
             flash("Link added successfully.", "success")
 
-        except Exception:
+        except Exception as e:
 
             db.session.rollback()
+            current_app.logger.error(f"Add link error: {e}")
 
             flash("Failed to add link.", "danger")
 
@@ -161,9 +178,11 @@ def delete_link(user_id, link_id):
 
         flash("Link deleted.", "info")
 
-    except Exception:
+    except Exception as e:
 
         db.session.rollback()
+        current_app.logger.error(f"Delete link error: {e}")
+
         flash("Error deleting link.", "danger")
 
     return redirect(url_for("user.profile", username=current_user.username))
@@ -218,9 +237,11 @@ def follow(username):
 
             flash(f"You are now following {username}.", "success")
 
-    except Exception:
+    except Exception as e:
 
         db.session.rollback()
+        current_app.logger.error(f"Follow error: {e}")
+
         flash("Follow failed.", "danger")
 
     return redirect(url_for("user.profile", username=username))
@@ -257,9 +278,11 @@ def unfollow(username):
 
             flash(f"You unfollowed {username}.", "info")
 
-    except Exception:
+    except Exception as e:
 
         db.session.rollback()
+        current_app.logger.error(f"Unfollow error: {e}")
+
         flash("Unfollow failed.", "danger")
 
     return redirect(url_for("user.profile", username=username))
