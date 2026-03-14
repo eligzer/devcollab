@@ -51,7 +51,7 @@ def profile(username):
 @login_required
 def edit_profile():
 
-    form = EditProfileForm(current_user.username, obj=current_user)
+    form = EditProfileForm(obj=current_user)
 
     if form.validate_on_submit():
 
@@ -105,6 +105,8 @@ def edit_profile():
         except Exception as e:
 
             db.session.rollback()
+
+            print("Edit profile error:", e)
 
             flash("Error updating profile.", "danger")
 
