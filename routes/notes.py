@@ -5,6 +5,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_required, current_user
 from sqlalchemy import or_
 from models import db, ClassNote, ClassNoteHistory, Comment, NoteLike, User, Notification
+from sqlalchemy.orm import joinedload
 from forms import ClassNoteForm, CommentForm, SearchForm
 from utils import log_activity
 from datetime import datetime, timezone
@@ -68,7 +69,11 @@ def create_note():
 
 @notes_bp.route('/<int:note_id>')
 def detail(note_id):
-    note = ClassNote.query.get_or_404(note_id)
+    note = ClassNote.query.options(
+        joinedload(ClassNote.comments).joinedload(Comment.author),
+        joinedload(ClassNote.comments).joinedload(Comment.likes),
+        joinedload(ClassNote.likes)
+    ).get_or_404(note_id)
     last_edit = note.history[0] if note.history else None
     comments = sorted(note.comments, key=lambda c: c.created_at)
     comment_form = CommentForm()
@@ -108,6 +113,11 @@ def edit_note(note_id):
 @login_required
 def delete_note(note_id):
     note = ClassNote.query.get_or_404(note_id)
+    
+    if note.created_by != current_user.username and not current_user.is_admin:
+        flash('Permission denied.', 'danger')
+        return redirect(url_for('notes.detail', note_id=note.id))
+
     note_title = note.title
 
     history = ClassNoteHistory(
@@ -155,7 +165,11 @@ def comment_note(note_id):
         # Notify note author if not the same user
         note_author = User.query.filter_by(username=note.created_by).first()
         if note_author and note_author.id != current_user.id:
-            notif = Notification(user_id=note_author.id, message=f'{current_user.username} commented on your note "{note.title}"')
+            notif = Notification(
+                user_id=note_author.id, 
+                message=f'{current_user.username} commented on your note "{note.title}"',
+                link=url_for('notes.detail', note_id=note.id)
+            )
             db.session.add(notif)
             
         log_activity(current_user.id, 'comment', 'comment', comment.id,
@@ -164,6 +178,22 @@ def comment_note(note_id):
             
         flash('Comment posted!', 'success')
     return redirect(url_for('notes.detail', note_id=note.id))
+
+
+@notes_bp.route('/<int:note_id>/comment/<int:comment_id>/delete', methods=['POST'])
+@login_required
+def delete_comment(note_id, comment_id):
+    comment = Comment.query.get_or_404(comment_id)
+    
+    if comment.author_id != current_user.id and not current_user.is_admin:
+        flash('Permission denied.', 'danger')
+        return redirect(url_for('notes.detail', note_id=note_id))
+
+    db.session.delete(comment)
+    db.session.commit()
+    flash('Comment deleted.', 'info')
+    
+    return redirect(url_for('notes.detail', note_id=note_id))
 
 
 @notes_bp.route('/<int:note_id>/like', methods=['POST'])
@@ -184,7 +214,11 @@ def toggle_like(note_id):
         # Notify note author if not the same user
         note_author = User.query.filter_by(username=note.created_by).first()
         if note_author and note_author.id != current_user.id:
-            notif = Notification(user_id=note_author.id, message=f'{current_user.username} liked your note "{note.title}"')
+            notif = Notification(
+                user_id=note_author.id, 
+                message=f'{current_user.username} liked your note "{note.title}"',
+                link=url_for('notes.detail', note_id=note.id)
+            )
             db.session.add(notif)
             
         db.session.commit()

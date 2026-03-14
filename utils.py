@@ -1,11 +1,11 @@
-from models import db, ActivityLog, User
+from models import db, Activity, User
 from datetime import datetime
 
-def log_activity(user_id, action_type, target_type, target_id, description):
+def log_activity(user_id, action, target_type, target_id, description):
     """Record a platform activity."""
-    entry = ActivityLog(
+    entry = Activity(
         user_id=user_id,
-        action_type=action_type,
+        action=action,
         target_type=target_type,
         target_id=target_id,
         description=description

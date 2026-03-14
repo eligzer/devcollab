@@ -134,6 +134,27 @@
                     {{ comment.content }}
                 </div>
 
+                <div style="margin-top: 10px; display: flex; align-items: center; gap: 0.5rem;">
+                    {% set user_liked_comment = false %}
+                    {% if current_user.is_authenticated %}
+                        {% for like in comment.likes %}
+                            {% if like.user_id == current_user.id %}
+                                {% set user_liked_comment = true %}
+                            {% endif %}
+                        {% endfor %}
+                        <form method="POST" action="{{ url_for('main.toggle_comment_like', comment_id=comment.id) }}" style="display:inline;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn {% if user_liked_comment %}btn-primary{% else %}btn-outline{% endif %}" style="padding: 2px 8px; font-size: 0.8rem;">
+                                {% if user_liked_comment %}❤️{% else %}🤍{% endif %} ({{ comment.likes|length }})
+                            </button>
+                        </form>
+                    {% else %}
+                        <span class="btn btn-outline" style="padding: 2px 8px; font-size: 0.8rem; cursor: default;">
+                            ❤️ {{ comment.likes|length }}
+                        </span>
+                    {% endif %}
+                </div>
+
             </div>
 
             {% endfor %}

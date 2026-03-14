@@ -3,7 +3,8 @@ from datetime import datetime, timezone
 from functools import wraps
 from flask import Blueprint, render_template, redirect, url_for, flash, abort
 from flask_login import login_required, current_user
-from models import db, InviteCode, User
+from sqlalchemy.orm import joinedload
+from models import db, InviteCode, User, Activity
 from forms import InviteCodeForm
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
@@ -94,3 +95,12 @@ def toggle_user_status(user_id):
     status = "reactivated" if user.is_active else "suspended"
     flash(f'User {user.username} has been {status}.', 'success')
     return redirect(url_for('admin.dashboard'))
+
+
+@admin_bp.route('/users/<int:user_id>/activity')
+@admin_required
+def user_activity(user_id):
+    user = User.query.get_or_404(user_id)
+    activities = Activity.query.options(joinedload(Activity.user)).filter_by(user_id=user.id).order_by(Activity.created_at.desc()).limit(100).all()
+    
+    return render_template('admin/user_activity.html', user=user, activities=activities)

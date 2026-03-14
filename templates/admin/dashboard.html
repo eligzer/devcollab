@@ -70,6 +70,7 @@
                                     style="padding: 4px 8px; font-size: 0.8rem;">Reactivate</button>
                                 {% endif %}
                             </form>
+                            <a href="{{ url_for('admin.user_activity', user_id=u.id) }}" class="btn btn-outline" style="padding: 4px 8px; font-size: 0.8rem; margin-left: 0.5rem;">View Activity</a>
                             {% else %}
                             <span class="text-muted" style="font-size: 0.8rem; font-style: italic;">Cannot modify
                                 admin</span>

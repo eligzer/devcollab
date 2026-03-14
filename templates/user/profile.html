@@ -1,109 +1,215 @@
 {% extends "base.html" %}
 
-{% block title %}DevCollab - {{ user.username }}'s Profile{% endblock %}
+{% block title %}
+DevCollab - {{ user.username }}'s Profile
+{% endblock %}
 
 {% block content %}
 <div class="user-profile">
-    <div class="profile-header" style="display: flex; align-items: center; margin-bottom: 2rem;">
-        <img src="{{ url_for('static', filename='profile_pics/' + (user.profile_image or 'default.jpg')) }}" alt="{{ user.username }} Profile Picture" style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover; margin-right: 2rem;">
+
+    <!-- Profile Header -->
+    <div class="profile-header" style="display:flex; align-items:center; flex-wrap:wrap; gap:2rem; margin-bottom:2rem;">
+
+        <img src="{{ url_for('static', filename='profile_pics/' ~ (user.profile_image if user.profile_image else 'default.jpg')) }}"
+            alt="{{ user.username }} profile picture"
+            style="width:150px;height:150px;border-radius:50%;object-fit:cover;">
+
         <div>
+
             <h1>{{ user.username }}</h1>
-            <p class="text-muted" style="color: #888;">Joined {{ user.created_at.strftime('%B %Y') }}</p>
-            <p style="margin-top: 5px; color: #aaa;">📧 {{ user.email }}</p>
+
+            <p class="text-muted">
+                Joined {{ user.created_at.strftime('%B %Y') if user.created_at else '' }}
+            </p>
+
+            {% if user.email %}
+            <p style="color:#aaa;">📧 {{ user.email }}</p>
+            {% endif %}
+
             {% if user.github_link %}
-                <p style="margin-top: 5px;"><a href="{{ user.github_link }}" target="_blank" style="color: #4a90e2; text-decoration: none;">🔗 GitHub Profile</a></p>
+            <p>
+                <a href="{{ user.github_link }}" target="_blank" style="color:#4a90e2;text-decoration:none;">
+                    🔗 GitHub Profile
+                </a>
+            </p>
             {% endif %}
+
             {% if user.bio %}
-                <p style="margin-top: 10px;">{{ user.bio }}</p>
+            <p style="margin-top:10px;">{{ user.bio }}</p>
             {% else %}
-                <p style="color: #666; font-style: italic; margin-top: 10px;">User hasn't added a bio yet.</p>
+            <p style="color:#666;font-style:italic;margin-top:10px;">
+                User hasn't added a bio yet.
+            </p>
             {% endif %}
-            
-            <div style="display: flex; gap: 1rem; margin-top: 10px;">
-                <span title="Followers"><strong>{{ user.followers.count() }}</strong> Followers</span>
-                <span title="Following"><strong>{{ user.followed.count() }}</strong> Following</span>
+
+            <!-- Followers / Following -->
+            <div style="display:flex;gap:1rem;margin-top:10px;">
+                <span title="Followers">
+                    <strong>{{ user.followers|length }}</strong> Followers
+                </span>
+
+                <span title="Following">
+                    <strong>{{ user.followed|length }}</strong> Following
+                </span>
             </div>
-            
-            {% if current_user.is_authenticated and current_user.id == user.id %}
-                <a href="{{ url_for('user.edit_profile') }}" class="btn" style="display:inline-block; margin-top: 10px;">Edit Profile</a>
-            {% elif current_user.is_authenticated %}
-                <div style="display: flex; gap: 0.5rem;">
-                    {% if is_following %}
-                        <form action="{{ url_for('user.unfollow', username=user.username) }}" method="POST" style="display:inline;">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="btn btn-secondary" style="margin-top: 10px;">Unfollow</button>
-                        </form>
-                    {% else %}
-                        <form action="{{ url_for('user.follow', username=user.username) }}" method="POST" style="display:inline;">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="btn btn-primary" style="margin-top: 10px;">Follow</button>
-                        </form>
-                    {% endif %}
-                    
-                    <a href="{{ url_for('messages.conversation', username=user.username) }}" class="btn btn-outline" style="margin-top: 10px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none;">✉️ Message</a>
-                </div>
-            {% endif %}
+
+
+            <!-- Profile Buttons -->
+            <div style="margin-top:10px;display:flex;gap:0.5rem;flex-wrap:wrap;">
+
+                {% if current_user.is_authenticated and current_user.id == user.id %}
+
+                <a href="{{ url_for('user.edit_profile') }}" class="btn">
+                    Edit Profile
+                </a>
+
+                {% elif current_user.is_authenticated %}
+
+                {% if is_following %}
+
+                <form action="{{ url_for('user.unfollow', username=user.username) }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="btn btn-secondary">Unfollow</button>
+                </form>
+
+                {% else %}
+
+                <form action="{{ url_for('user.follow', username=user.username) }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="btn btn-primary">Follow</button>
+                </form>
+
+                {% endif %}
+
+                <a href="{{ url_for('messages.conversation', username=user.username) }}" class="btn btn-outline"
+                    style="text-decoration:none;">
+                    ✉️ Message
+                </a>
+
+                {% endif %}
+
+            </div>
+
         </div>
     </div>
-    
-    <div class="profile-links" style="margin-bottom: 2rem;">
+
+
+    <!-- Custom Links -->
+    <div class="profile-links" style="margin-bottom:2rem;">
+
         <h3>Links</h3>
-        {% if user.links.count() > 0 %}
-            <ul style="list-style: none; padding: 0;">
+
+        {% if user.links|length > 0 %}
+
+        <ul style="list-style:none;padding:0;">
+
             {% for link in user.links %}
-                <li style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
-                    <a href="{{ link.url }}" target="_blank" style="color: var(--accent); text-decoration: none;">🔗 {{ link.title }}</a>
-                    {% if current_user.is_authenticated and current_user.id == user.id %}
-                        <form action="{{ url_for('user.delete_link', user_id=user.id, link_id=link.id) }}" method="POST" style="display:inline;">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" style="background:none; border:none; color: var(--danger); cursor:pointer; font-size: 0.8rem;">[Delete]</button>
-                        </form>
-                    {% endif %}
-                </li>
+            <li style="margin-bottom:0.5rem;display:flex;gap:0.5rem;align-items:center;">
+
+                <a href="{{ link.url }}" target="_blank" style="color:var(--accent);text-decoration:none;">
+                    🔗 {{ link.title }}
+                </a>
+
+                {% if current_user.is_authenticated and current_user.id == user.id %}
+
+                <form action="{{ url_for('user.delete_link', user_id=user.id, link_id=link.id) }}" method="POST">
+
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <button type="submit"
+                        style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:0.8rem;">
+                        Delete
+                    </button>
+
+                </form>
+
+                {% endif %}
+
+            </li>
             {% endfor %}
-            </ul>
+
+        </ul>
+
         {% else %}
-            <p class="text-muted">No custom links added.</p>
+
+        <p class="text-muted">No custom links added.</p>
+
         {% endif %}
 
+
+        <!-- Add Link Form -->
         {% if current_user.is_authenticated and current_user.id == user.id %}
-        <div class="add-link-form" style="margin-top: 1rem; padding: 1rem; background: var(--bg-card); border-radius: 8px;">
+
+        <div style="margin-top:1rem;padding:1rem;background:var(--bg-card);border-radius:8px;">
+
             <h4>Add New Link</h4>
-            <form action="{{ url_for('user.add_link') }}" method="POST" style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+
+            <form action="{{ url_for('user.add_link') }}" method="POST"
+                style="display:flex;gap:1rem;flex-wrap:wrap;align-items:flex-end;">
+
                 {{ link_form.hidden_tag() }}
-                <div style="flex: 1; min-width: 150px;">
-                    {{ link_form.title.label(style="display:block; margin-bottom:0.25rem;") }}
-                    {{ link_form.title(class="form-control", placeholder="e.g. Portfolio") }}
+
+                <div style="flex:1;min-width:150px;">
+                    {{ link_form.title.label }}
+                    {{ link_form.title(class="form-control", placeholder="Portfolio") }}
                 </div>
-                <div style="flex: 2; min-width: 250px;">
-                    {{ link_form.url.label(style="display:block; margin-bottom:0.25rem;") }}
+
+                <div style="flex:2;min-width:200px;">
+                    {{ link_form.url.label }}
                     {{ link_form.url(class="form-control", placeholder="https://...") }}
                 </div>
+
                 <div>
                     {{ link_form.submit(class="btn btn-primary") }}
                 </div>
+
             </form>
+
         </div>
+
         {% endif %}
+
     </div>
-    
+
+
+    <!-- User Notes -->
     <h3>Notes by {{ user.username }}</h3>
+
     {% if notes %}
-        <div class="card-grid">
-            {% for note in notes %}
-            <div class="card">
-                <h3><a href="{{ url_for('notes.detail', note_id=note.id) }}">{{ note.title }}</a></h3>
-                <div class="meta">
-                    Last updated: {{ note.updated_at.strftime('%Y-%m-%d %H:%M:%S') }}
-                </div>
-                <div class="preview">
-                    {{ note.content[:150] }}{% if note.content|length > 150 %}...{% endif %}
-                </div>
+
+    <div class="card-grid">
+
+        {% for note in notes %}
+
+        <div class="card">
+
+            <h3>
+                <a href="{{ url_for('notes.detail', note_id=note.id) }}">
+                    {{ note.title }}
+                </a>
+            </h3>
+
+            <div class="meta">
+                Last updated:
+                {{ note.updated_at.strftime('%Y-%m-%d %H:%M:%S') if note.updated_at else '' }}
             </div>
-            {% endfor %}
+
+            <div class="preview">
+                {{ note.content[:150] }}
+                {% if note.content|length > 150 %}...{% endif %}
+            </div>
+
         </div>
+
+        {% endfor %}
+
+    </div>
+
     {% else %}
-        <p>No notes published yet.</p>
+
+    <p>No notes published yet.</p>
+
     {% endif %}
+
 </div>
 {% endblock %}

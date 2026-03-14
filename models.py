@@ -66,7 +66,7 @@ class User(UserMixin, db.Model):
     notifications = db.relationship("Notification", backref="user", lazy=True)
     pinned_notes = db.relationship("PinnedNote", backref="user", lazy=True)
 
-    activities = db.relationship("ActivityLog", backref="user", lazy=True)
+    activities = db.relationship("Activity", backref="user", lazy=True)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -222,11 +222,33 @@ class Comment(db.Model):
 
     note_id = db.Column(db.Integer, db.ForeignKey("class_notes.id"), nullable=True)
 
+    likes = db.relationship(
+        "CommentLike",
+        backref="comment",
+        lazy=True,
+        cascade="all, delete-orphan"
+    )
 
 # ---------------------------
-# ACTIVITY LOG
+# COMMENT LIKE
 # ---------------------------
-class ActivityLog(db.Model):
+class CommentLike(db.Model):
+
+    __tablename__ = "comment_likes"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+
+    comment_id = db.Column(db.Integer, db.ForeignKey("comments.id"), nullable=False)
+
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+# ---------------------------
+# ACTIVITY
+# ---------------------------
+class Activity(db.Model):
 
     __tablename__ = "activity_log"
 
@@ -234,7 +256,7 @@ class ActivityLog(db.Model):
 
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
 
-    action_type = db.Column(db.String(50), nullable=False)
+    action = db.Column(db.String(50), nullable=False)
 
     target_type = db.Column(db.String(50), nullable=False)
 
@@ -347,6 +369,8 @@ class Notification(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
 
     message = db.Column(db.Text, nullable=False)
+
+    link = db.Column(db.String(255), nullable=True)
 
     is_read = db.Column(db.Boolean, default=False)
 

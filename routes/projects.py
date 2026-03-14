@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for, flash
 from flask_login import login_required, current_user
-from models import db, Project
+from sqlalchemy.orm import joinedload
+from models import db, Project, CodeSnippet
 from forms import ProjectForm
 
 projects_bp = Blueprint('projects', __name__, url_prefix='/projects')
@@ -8,7 +9,10 @@ projects_bp = Blueprint('projects', __name__, url_prefix='/projects')
 
 @projects_bp.route('/')
 def list_projects():
-    projects = Project.query.order_by(Project.created_at.desc()).all()
+    projects = Project.query.options(
+        joinedload(Project.owner),
+        joinedload(Project.snippets)
+    ).order_by(Project.created_at.desc()).all()
     return render_template('projects/list.html', projects=projects)
 
 
@@ -32,6 +36,8 @@ def create_project():
 
 @projects_bp.route('/<int:project_id>')
 def detail(project_id):
-    project = Project.query.get_or_404(project_id)
+    project = Project.query.options(
+        joinedload(Project.snippets).joinedload(CodeSnippet.author)
+    ).get_or_404(project_id)
     snippets = sorted(project.snippets, key=lambda s: s.created_at, reverse=True)
     return render_template('projects/detail.html', project=project, snippets=snippets)

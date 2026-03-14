@@ -123,6 +123,10 @@ def create_app():
     # Error Handlers
     # ----------------------------
 
+    @app.errorhandler(403)
+    def forbidden(error):
+        return render_template("errors/403.html"), 403
+
     @app.errorhandler(404)
     def page_not_found(error):
         return render_template("errors/404.html"), 404

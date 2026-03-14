@@ -5,7 +5,8 @@ from markupsafe import Markup
 from pygments import highlight
 from pygments.lexers import get_lexer_by_name, TextLexer
 from pygments.formatters import HtmlFormatter
-from models import db, Project, CodeSnippet, Comment
+from sqlalchemy.orm import joinedload
+from models import db, Project, CodeSnippet, Comment, Notification, User
 from forms import CodeSnippetForm, CommentForm
 from utils import log_activity
 
@@ -58,10 +59,13 @@ def create_snippet(project_id):
 
 @snippets_bp.route('/snippets/<int:snippet_id>')
 def detail(snippet_id):
-    snippet = CodeSnippet.query.get_or_404(snippet_id)
+    snippet = CodeSnippet.query.options(
+        joinedload(CodeSnippet.comments).joinedload(Comment.author),
+        joinedload(CodeSnippet.comments).joinedload(Comment.likes)
+    ).get_or_404(snippet_id)
     highlighted = highlight_code(snippet.code, snippet.language)
     css = get_highlight_css()
-    comments = snippet.comments.order_by(Comment.created_at.asc()).all()
+    comments = sorted(snippet.comments, key=lambda c: c.created_at)
     comment_form = CommentForm()
     return render_template('snippets/detail.html', snippet=snippet,
                            highlighted_code=highlighted, highlight_css=css,
@@ -90,6 +94,23 @@ def edit_snippet(snippet_id):
     return render_template('snippets/edit.html', form=form, snippet=snippet)
 
 
+@snippets_bp.route('/snippets/<int:snippet_id>/delete', methods=['POST'])
+@login_required
+def delete_snippet(snippet_id):
+    snippet = CodeSnippet.query.get_or_404(snippet_id)
+    
+    if snippet.author_id != current_user.id and not current_user.is_admin:
+        flash('Permission denied.', 'danger')
+        return redirect(url_for('snippets.detail', snippet_id=snippet.id))
+
+    project_id = snippet.project_id
+    db.session.delete(snippet)
+    db.session.commit()
+    flash('Snippet deleted.', 'info')
+    
+    return redirect(url_for('projects.detail', project_id=project_id))
+
+
 @snippets_bp.route('/snippets/<int:snippet_id>/comment', methods=['POST'])
 @login_required
 def comment_snippet(snippet_id):
@@ -103,8 +124,32 @@ def comment_snippet(snippet_id):
         )
         db.session.add(comment)
         db.session.flush()
+
+        if snippet.author_id != current_user.id:
+            notif = Notification(
+                user_id=snippet.author_id,
+                message=f'{current_user.username} commented on your snippet "{snippet.title}"',
+                link=url_for('snippets.detail', snippet_id=snippet.id)
+            )
+            db.session.add(notif)
         log_activity(current_user.id, 'comment', 'comment', comment.id,
                      f'{current_user.username} commented on snippet "{snippet.title}"')
         db.session.commit()
         flash('Comment posted!', 'success')
     return redirect(url_for('snippets.detail', snippet_id=snippet.id))
+
+
+@snippets_bp.route('/snippets/<int:snippet_id>/comment/<int:comment_id>/delete', methods=['POST'])
+@login_required
+def delete_comment(snippet_id, comment_id):
+    comment = Comment.query.get_or_404(comment_id)
+    
+    if comment.author_id != current_user.id and not current_user.is_admin:
+        flash('Permission denied.', 'danger')
+        return redirect(url_for('snippets.detail', snippet_id=snippet_id))
+
+    db.session.delete(comment)
+    db.session.commit()
+    flash('Comment deleted.', 'info')
+    
+    return redirect(url_for('snippets.detail', snippet_id=snippet_id))

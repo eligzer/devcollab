@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Activity Log: {{ user.username }} — Admin{% endblock %}
+
+{% block content %}
+<div class="container animate-in">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <h1>Activity Log: {{ user.username }}</h1>
+        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline">← Back to Dashboard</a>
+    </div>
+
+    {% if activities %}
+    <div class="activity-timeline">
+        {% for a in activities %}
+        <div class="activity-item" style="display: flex; gap: 1rem; align-items: flex-start; margin-bottom: 1.5rem; padding: 1rem; background: var(--bg-card); border-radius: 8px; border: 1px solid var(--border-color);">
+            <div style="flex-shrink: 0;">
+                <img src="{{ url_for('static', filename='profile_pics/' + (a.user.profile_image or 'default.jpg')) }}" alt="Avatar" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover;">
+            </div>
+            <div class="activity-content" style="flex-grow: 1;">
+                <p style="margin: 0; font-weight: bold;"><a href="{{ url_for('user.profile', username=a.user.username) }}" style="color: var(--accent); text-decoration: none;">{{ a.user.username }}</a></p>
+                <p class="activity-desc" style="margin: 5px 0; color: var(--text-main);">{{ a.description }}</p>
+                <span class="activity-time" style="font-size: 0.85rem; color: var(--text-muted);">{{ a.created_at.strftime('%b %d, %Y %I:%M %p') }}</span>
+                <span style="display:block; margin-top:5px; font-size:0.75rem; font-family:var(--font-mono); color:var(--text-muted);">Action: {{ a.action }} | Target: {{ a.target_type }}:{{ a.target_id }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state glass-card">
+        <p>No activity recorded for this user.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,8 +1,9 @@
-from flask import Blueprint, render_template, request
-from flask_login import current_user
+from flask import Blueprint, render_template, request, redirect, url_for
+from flask_login import current_user, login_required
 from sqlalchemy import or_
+from sqlalchemy.orm import joinedload
 
-from models import db, User, Project, ClassNote
+from models import db, User, Project, ClassNote, Comment, CommentLike, Notification
 
 main_bp = Blueprint('main', __name__)
 
@@ -28,9 +29,12 @@ def search():
             User.username.ilike(search_filter)
         ).all()
 
-        projects = Project.query.filter(
+        projects = Project.query.options(
+            joinedload(Project.owner),
+            joinedload(Project.snippets)
+        ).filter(
             or_(
-                Project.title.ilike(search_filter),
+                Project.name.ilike(search_filter),
                 Project.description.ilike(search_filter)
             )
         ).all()
@@ -46,7 +50,37 @@ def search():
         'search_results.html',
         query=query,
         users=users,
-        projects=projects,
         notes=notes,
         current_user=current_user
     )
+
+@main_bp.route('/comment/<int:comment_id>/like', methods=['POST'])
+@login_required
+def toggle_comment_like(comment_id):
+    comment = Comment.query.get_or_404(comment_id)
+    existing_like = CommentLike.query.filter_by(user_id=current_user.id, comment_id=comment.id).first()
+    
+    if existing_like:
+        db.session.delete(existing_like)
+        db.session.commit()
+    else:
+        new_like = CommentLike(user_id=current_user.id, comment_id=comment.id)
+        db.session.add(new_like)
+        
+        if comment.author_id != current_user.id:
+            link = None
+            if comment.note_id:
+                link = url_for('notes.detail', note_id=comment.note_id)
+            elif comment.snippet_id:
+                link = url_for('snippets.detail', snippet_id=comment.snippet_id)
+                
+            notif = Notification(
+                user_id=comment.author_id,
+                message=f'{current_user.username} liked your comment.',
+                link=link
+            )
+            db.session.add(notif)
+            
+        db.session.commit()
+        
+    return redirect(request.referrer or url_for('main.index'))

@@ -7,6 +7,7 @@ from flask_login import login_required, current_user
 from models import db, User, ClassNote, UserLink, Follow, Notification
 from forms import EditProfileForm, UserLinkForm
 from utils import log_activity
+from sqlalchemy.orm import joinedload
 
 
 user_bp = Blueprint("user", __name__)
@@ -17,7 +18,11 @@ user_bp = Blueprint("user", __name__)
 # ----------------------------
 @user_bp.route("/user/<username>")
 def profile(username):
-    user = User.query.filter_by(username=username).first_or_404()
+    user = User.query.options(
+        joinedload(User.followers),
+        joinedload(User.followed),
+        joinedload(User.links)
+    ).filter_by(username=username).first_or_404()
 
     notes = ClassNote.query.filter_by(
         created_by=user.username
@@ -59,18 +64,22 @@ def edit_profile():
         pic_file = form.profile_image.data
 
         if pic_file and hasattr(pic_file, "filename") and pic_file.filename != "":
-            filename = secure_filename(pic_file.filename)
+            allowed_extensions = {'png', 'jpg', 'jpeg', 'gif'}
+            def allowed_file(filename):
+                return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_extensions
 
-            unique_filename = f"{uuid.uuid4()}_{filename}"
-
-            pic_path = os.path.join(
-                current_app.config["UPLOAD_FOLDER"],
-                unique_filename
-            )
-
-            pic_file.save(pic_path)
-
-            current_user.profile_image = unique_filename
+            if allowed_file(pic_file.filename):
+                filename = secure_filename(pic_file.filename)
+                unique_filename = f"{uuid.uuid4()}_{filename}"
+                pic_path = os.path.join(
+                    current_app.config["UPLOAD_FOLDER"],
+                    unique_filename
+                )
+                pic_file.save(pic_path)
+                current_user.profile_image = unique_filename
+            else:
+                flash("Invalid profile image format.", "danger")
+                return redirect(url_for('user.edit_profile'))
 
         # ---- Update Profile Fields ----
         current_user.username = form.username.data
@@ -186,7 +195,8 @@ def follow(username):
 
         notif = Notification(
             user_id=user.id,
-            message=f"{current_user.username} started following you."
+            message=f"{current_user.username} started following you.",
+            link=url_for('user.profile', username=current_user.username)
         )
 
         db.session.add(notif)

@@ -32,7 +32,15 @@
     <div class="mt-3" style="display: flex; gap: 0.75rem;">
         <a href="{{ url_for('projects.detail', project_id=snippet.project.id) }}" class="btn btn-outline">← Back to {{ snippet.project.name }}</a>
         {% if current_user.is_authenticated %}
-            <a href="{{ url_for('snippets.edit_snippet', snippet_id=snippet.id) }}" class="btn btn-primary" id="edit-snippet-btn">✏️ Edit Snippet</a>
+            {% if current_user.id == snippet.author_id %}
+                <a href="{{ url_for('snippets.edit_snippet', snippet_id=snippet.id) }}" class="btn btn-primary" id="edit-snippet-btn">✏️ Edit Snippet</a>
+            {% endif %}
+            {% if current_user.id == snippet.author_id or current_user.is_admin %}
+                <form action="{{ url_for('snippets.delete_snippet', snippet_id=snippet.id) }}" method="POST" onsubmit="return confirm('Delete this snippet?');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger">🗑️ Delete</button>
+                </form>
+            {% endif %}
         {% endif %}
     </div>
 
@@ -48,11 +56,40 @@
                 <div class="comment-header" style="display: flex; align-items: center; gap: 0.75rem;">
                     <img src="{{ url_for('static', filename='profile_pics/' + (comment.author.profile_image or 'default.jpg')) }}" alt="Avatar" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">
                     <div style="display: flex; flex-direction: column;">
-                        <strong class="comment-author" style="line-height: 1;">{{ comment.author.username }}</strong>
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; width: 100%;">
+                            <strong class="comment-author" style="line-height: 1;">{{ comment.author.username }}</strong>
+                            {% if current_user.is_authenticated and (current_user.id == comment.author_id or current_user.is_admin) %}
+                            <form method="POST" action="{{ url_for('snippets.delete_comment', snippet_id=snippet.id, comment_id=comment.id) }}" style="display:inline;" onsubmit="return confirm('Delete this comment?');">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="text-danger" style="background:none; border:none; cursor:pointer; font-size:0.85rem; padding:0;">Delete</button>
+                            </form>
+                            {% endif %}
+                        </div>
                         <span class="comment-time">{{ comment.created_at.strftime('%b %d, %Y %I:%M %p') }}</span>
                     </div>
                 </div>
                 <div class="comment-body">{{ comment.content }}</div>
+                
+                <div style="margin-top: 10px; display: flex; align-items: center; gap: 0.5rem;">
+                    {% set user_liked_comment = false %}
+                    {% if current_user.is_authenticated %}
+                        {% for like in comment.likes %}
+                            {% if like.user_id == current_user.id %}
+                                {% set user_liked_comment = true %}
+                            {% endif %}
+                        {% endfor %}
+                        <form method="POST" action="{{ url_for('main.toggle_comment_like', comment_id=comment.id) }}" style="display:inline;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn {% if user_liked_comment %}btn-primary{% else %}btn-outline{% endif %}" style="padding: 2px 8px; font-size: 0.8rem;">
+                                {% if user_liked_comment %}❤️{% else %}🤍{% endif %} ({{ comment.likes|length }})
+                            </button>
+                        </form>
+                    {% else %}
+                        <span class="btn btn-outline" style="padding: 2px 8px; font-size: 0.8rem; cursor: default;">
+                            ❤️ {{ comment.likes|length }}
+                        </span>
+                    {% endif %}
+                </div>
             </div>
             {% endfor %}
         </div>
