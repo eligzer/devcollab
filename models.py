@@ -256,15 +256,17 @@ class Activity(db.Model):
 
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
 
-    action = db.Column(db.String(50), nullable=False)
+    action_type = db.Column(db.String(50), nullable=False)
 
-    target_type = db.Column(db.String(50), nullable=False)
+    target_type = db.Column(db.String(50))
 
-    target_id = db.Column(db.Integer, nullable=True)
+    target_id = db.Column(db.Integer)
 
-    description = db.Column(db.String(500), nullable=False)
+    description = db.Column(db.Text)
 
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=db.func.now())
+
+    user = db.relationship("User", backref="activities")
 
 
 # ---------------------------
