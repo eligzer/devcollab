@@ -8,3 +8,6 @@ gunicorn==25.1.0
 psycopg2-binary>=2.9.9
 google-generativeai==0.8.6
 Flask-Limiter==4.1.1
+Flask-SocketIO
+python-SocketIO
+eventlet
