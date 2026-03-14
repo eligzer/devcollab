@@ -5,14 +5,57 @@ DevCollab - {{ user.username }}'s Profile
 {% endblock %}
 
 {% block content %}
-<div class="user-profile">
+<style>
+html, body {
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+.profile-card {
+    width: 100%;
+    max-width: 750px;
+    margin: 0 auto;
+}
+
+.profile-header {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-bottom: 2rem;
+}
+
+.profile-header img {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+img {
+    max-width: 100%;
+    height: auto;
+}
+
+@media (max-width: 768px) {
+    .profile-card {
+        max-width: 100%;
+    }
+
+    .profile-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+</style>
+
+<div class="profile-card">
 
     <!-- Profile Header -->
-    <div class="profile-header" style="display:flex; align-items:center; flex-wrap:wrap; gap:2rem; margin-bottom:2rem;">
+    <div class="profile-header">
 
         <img src="{{ url_for('static', filename='profile_pics/' ~ (user.profile_image if user.profile_image else 'default.jpg')) }}"
-            alt="{{ user.username }} profile picture"
-            style="width:150px;height:150px;border-radius:50%;object-fit:cover;">
+            alt="{{ user.username }} profile picture">
 
         <div>
 
