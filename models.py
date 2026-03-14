@@ -6,9 +6,9 @@ from werkzeug.security import generate_password_hash, check_password_hash
 db = SQLAlchemy()
 
 
-# ======================
+# ---------------------------
 # USER
-# ======================
+# ---------------------------
 class User(UserMixin, db.Model):
 
     __tablename__ = "users"
@@ -33,7 +33,21 @@ class User(UserMixin, db.Model):
     snippets = db.relationship("CodeSnippet", backref="author", lazy=True)
     comments = db.relationship("Comment", backref="author", lazy=True)
 
-    links = db.relationship("UserLink", backref="user", lazy=True, cascade="all, delete-orphan")
+    links = db.relationship("UserLink", backref="user", lazy=True)
+
+    followers = db.relationship(
+        "Follow",
+        foreign_keys="Follow.following_id",
+        backref="following",
+        lazy=True
+    )
+
+    followed = db.relationship(
+        "Follow",
+        foreign_keys="Follow.follower_id",
+        backref="follower",
+        lazy=True
+    )
 
     messages_sent = db.relationship(
         "Message",
@@ -49,35 +63,24 @@ class User(UserMixin, db.Model):
         lazy=True
     )
 
-    notifications = db.relationship(
-        "Notification",
-        backref="user",
-        lazy=True,
-        cascade="all, delete-orphan"
-    )
+    notifications = db.relationship("Notification", backref="user", lazy=True)
+    pinned_notes = db.relationship("PinnedNote", backref="user", lazy=True)
 
-    activities = db.relationship(
-        "ActivityLog",
-        backref="user",
-        lazy=True
-    )
+    activities = db.relationship("ActivityLog", backref="user", lazy=True)
 
     def set_password(self, password):
-
         self.password_hash = generate_password_hash(password)
 
     def check_password(self, password):
-
         return check_password_hash(self.password_hash, password)
 
     def __repr__(self):
-
         return f"<User {self.username}>"
 
 
-# ======================
+# ---------------------------
 # PROJECT
-# ======================
+# ---------------------------
 class Project(db.Model):
 
     __tablename__ = "projects"
@@ -88,16 +91,9 @@ class Project(db.Model):
 
     description = db.Column(db.Text, default="")
 
-    created_at = db.Column(
-        db.DateTime,
-        default=lambda: datetime.now(timezone.utc)
-    )
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
-    owner_id = db.Column(
-        db.Integer,
-        db.ForeignKey("users.id"),
-        nullable=False
-    )
+    owner_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
 
     snippets = db.relationship(
         "CodeSnippet",
@@ -106,14 +102,10 @@ class Project(db.Model):
         cascade="all, delete-orphan"
     )
 
-    def __repr__(self):
 
-        return f"<Project {self.name}>"
-
-
-# ======================
+# ---------------------------
 # CODE SNIPPET
-# ======================
+# ---------------------------
 class CodeSnippet(db.Model):
 
     __tablename__ = "code_snippets"
@@ -128,30 +120,15 @@ class CodeSnippet(db.Model):
 
     description = db.Column(db.Text, default="")
 
-    created_at = db.Column(
-        db.DateTime,
-        default=lambda: datetime.now(timezone.utc)
-    )
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
-    updated_at = db.Column(
-        db.DateTime,
-        nullable=True,
-        onupdate=lambda: datetime.now(timezone.utc)
-    )
+    updated_at = db.Column(db.DateTime, nullable=True)
 
     edited_by = db.Column(db.String(80), nullable=True)
 
-    project_id = db.Column(
-        db.Integer,
-        db.ForeignKey("projects.id"),
-        nullable=False
-    )
+    project_id = db.Column(db.Integer, db.ForeignKey("projects.id"), nullable=False)
 
-    author_id = db.Column(
-        db.Integer,
-        db.ForeignKey("users.id"),
-        nullable=False
-    )
+    author_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
 
     comments = db.relationship(
         "Comment",
@@ -160,14 +137,10 @@ class CodeSnippet(db.Model):
         cascade="all, delete-orphan"
     )
 
-    def __repr__(self):
 
-        return f"<CodeSnippet {self.title}>"
-
-
-# ======================
+# ---------------------------
 # CLASS NOTES
-# ======================
+# ---------------------------
 class ClassNote(db.Model):
 
     __tablename__ = "class_notes"
@@ -180,14 +153,15 @@ class ClassNote(db.Model):
 
     created_by = db.Column(db.String(80), nullable=False)
 
-    created_at = db.Column(
-        db.DateTime,
-        default=lambda: datetime.now(timezone.utc)
-    )
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
-    updated_at = db.Column(
-        db.DateTime,
-        default=lambda: datetime.now(timezone.utc)
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    history = db.relationship(
+        "ClassNoteHistory",
+        backref="note",
+        lazy=True,
+        cascade="all, delete-orphan"
     )
 
     comments = db.relationship(
@@ -204,14 +178,34 @@ class ClassNote(db.Model):
         cascade="all, delete-orphan"
     )
 
-    def __repr__(self):
 
-        return f"<ClassNote {self.title}>"
+# ---------------------------
+# CLASS NOTE HISTORY
+# ---------------------------
+class ClassNoteHistory(db.Model):
+
+    __tablename__ = "class_note_history"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    note_id = db.Column(
+        db.Integer,
+        db.ForeignKey("class_notes.id", ondelete="SET NULL"),
+        nullable=True
+    )
+
+    previous_content = db.Column(db.Text, nullable=False)
+
+    edited_by = db.Column(db.String(80), nullable=False)
+
+    action_type = db.Column(db.String(20), nullable=False)
+
+    edited_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
 
-# ======================
-# COMMENT
-# ======================
+# ---------------------------
+# COMMENTS
+# ---------------------------
 class Comment(db.Model):
 
     __tablename__ = "comments"
@@ -220,48 +214,25 @@ class Comment(db.Model):
 
     content = db.Column(db.Text, nullable=False)
 
-    created_at = db.Column(
-        db.DateTime,
-        default=lambda: datetime.now(timezone.utc)
-    )
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
-    author_id = db.Column(
-        db.Integer,
-        db.ForeignKey("users.id"),
-        nullable=False
-    )
+    author_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
 
-    snippet_id = db.Column(
-        db.Integer,
-        db.ForeignKey("code_snippets.id"),
-        nullable=True
-    )
+    snippet_id = db.Column(db.Integer, db.ForeignKey("code_snippets.id"), nullable=True)
 
-    note_id = db.Column(
-        db.Integer,
-        db.ForeignKey("class_notes.id"),
-        nullable=True
-    )
-
-    def __repr__(self):
-
-        return f"<Comment {self.id}>"
+    note_id = db.Column(db.Integer, db.ForeignKey("class_notes.id"), nullable=True)
 
 
-# ======================
+# ---------------------------
 # ACTIVITY LOG
-# ======================
+# ---------------------------
 class ActivityLog(db.Model):
 
     __tablename__ = "activity_log"
 
     id = db.Column(db.Integer, primary_key=True)
 
-    user_id = db.Column(
-        db.Integer,
-        db.ForeignKey("users.id"),
-        nullable=False
-    )
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
 
     action_type = db.Column(db.String(50), nullable=False)
 
@@ -271,19 +242,12 @@ class ActivityLog(db.Model):
 
     description = db.Column(db.String(500), nullable=False)
 
-    created_at = db.Column(
-        db.DateTime,
-        default=lambda: datetime.now(timezone.utc)
-    )
-
-    def __repr__(self):
-
-        return f"<ActivityLog {self.action_type}>"
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
 
-# ======================
+# ---------------------------
 # INVITE CODE
-# ======================
+# ---------------------------
 class InviteCode(db.Model):
 
     __tablename__ = "invite_codes"
@@ -294,10 +258,7 @@ class InviteCode(db.Model):
 
     created_by = db.Column(db.String(80), nullable=False)
 
-    created_at = db.Column(
-        db.DateTime,
-        default=lambda: datetime.now(timezone.utc)
-    )
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     used_by = db.Column(db.String(80), nullable=True)
 
@@ -305,109 +266,104 @@ class InviteCode(db.Model):
 
     is_active = db.Column(db.Boolean, default=True)
 
-    def __repr__(self):
 
-        return f"<InviteCode {self.code}>"
-
-
-# ======================
+# ---------------------------
 # NOTE LIKE
-# ======================
+# ---------------------------
 class NoteLike(db.Model):
 
     __tablename__ = "note_likes"
 
     id = db.Column(db.Integer, primary_key=True)
 
-    user_id = db.Column(
-        db.Integer,
-        db.ForeignKey("users.id"),
-        nullable=False
-    )
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
 
-    note_id = db.Column(
-        db.Integer,
-        db.ForeignKey("class_notes.id"),
-        nullable=False
-    )
+    note_id = db.Column(db.Integer, db.ForeignKey("class_notes.id"), nullable=False)
 
-    created_at = db.Column(
-        db.DateTime,
-        default=lambda: datetime.now(timezone.utc)
-    )
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
 
-# ======================
-# USER LINK
-# ======================
+# ---------------------------
+# USER LINKS
+# ---------------------------
 class UserLink(db.Model):
 
     __tablename__ = "user_links"
 
     id = db.Column(db.Integer, primary_key=True)
 
-    user_id = db.Column(
-        db.Integer,
-        db.ForeignKey("users.id"),
-        nullable=False
-    )
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
 
     title = db.Column(db.String(100), nullable=False)
 
     url = db.Column(db.String(500), nullable=False)
 
 
-# ======================
-# MESSAGE
-# ======================
+# ---------------------------
+# FOLLOW SYSTEM
+# ---------------------------
+class Follow(db.Model):
+
+    __tablename__ = "follows"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    follower_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+
+    following_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+# ---------------------------
+# MESSAGES
+# ---------------------------
 class Message(db.Model):
 
     __tablename__ = "messages"
 
     id = db.Column(db.Integer, primary_key=True)
 
-    sender_id = db.Column(
-        db.Integer,
-        db.ForeignKey("users.id"),
-        nullable=False
-    )
+    sender_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
 
-    receiver_id = db.Column(
-        db.Integer,
-        db.ForeignKey("users.id"),
-        nullable=False
-    )
+    receiver_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
 
     content = db.Column(db.Text, nullable=False)
 
-    created_at = db.Column(
-        db.DateTime,
-        default=lambda: datetime.now(timezone.utc)
-    )
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     is_read = db.Column(db.Boolean, default=False)
 
 
-# ======================
-# NOTIFICATION
-# ======================
+# ---------------------------
+# NOTIFICATIONS
+# ---------------------------
 class Notification(db.Model):
 
     __tablename__ = "notifications"
 
     id = db.Column(db.Integer, primary_key=True)
 
-    user_id = db.Column(
-        db.Integer,
-        db.ForeignKey("users.id"),
-        nullable=False
-    )
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
 
     message = db.Column(db.Text, nullable=False)
 
     is_read = db.Column(db.Boolean, default=False)
 
-    created_at = db.Column(
-        db.DateTime,
-        default=lambda: datetime.now(timezone.utc)
-    )
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+# ---------------------------
+# PINNED NOTES
+# ---------------------------
+class PinnedNote(db.Model):
+
+    __tablename__ = "pinned_notes"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+
+    note_id = db.Column(db.Integer, db.ForeignKey("class_notes.id"), nullable=False)
+
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
