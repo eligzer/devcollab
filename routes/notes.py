@@ -69,7 +69,7 @@ def create_note():
 @notes_bp.route('/<int:note_id>')
 def detail(note_id):
     note = ClassNote.query.get_or_404(note_id)
-    last_edit = note.history.first()
+    last_edit = note.history[0] if note.history else None
     comments = note.comments.order_by(Comment.created_at.asc()).all()
     comment_form = CommentForm()
     return render_template('notes/detail.html', note=note, last_edit=last_edit,
