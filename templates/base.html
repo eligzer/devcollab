@@ -1,111 +1,86 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="DevCollab — A developer collaboration platform for sharing projects and code.">
-    <title>{% block title %}DevCollab{% endblock %}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    {% block extra_head %}{% endblock %}
-</head>
-<body>
-    <!-- Navbar -->
-    <nav class="navbar">
-        <div class="navbar-inner">
-            <a href="{{ url_for('main.index') }}" class="navbar-brand">⟨/⟩ DevCollab</a>
-            <button class="mobile-menu-btn" aria-label="Toggle navigation" aria-expanded="false">
-                <span class="hamburger-box">
-                    <span class="hamburger-inner"></span>
-                </span>
-            </button>
-            <ul class="navbar-links">
-                <li><a href="{{ url_for('projects.list_projects') }}">Projects</a></li>
-                <li><a href="{{ url_for('notes.list_notes') }}">Class Notebook</a></li>
-                <li><a href="{{ url_for('activity.feed') }}">Activity</a></li>
-                
-                <!-- Search Bar -->
-                <li>
-                    <form action="{{ url_for('main.search') }}" method="get" class="nav-search search-form">
-                        <input type="text" name="q" placeholder="Search..." value="{{ request.args.get('q', '') }}" class="nav-search-input">
-                        <button type="submit" class="nav-search-btn">Search</button>
-                    </form>
-                </li>
-                
-                {% if current_user.is_authenticated %}
-                    <li><a href="{{ url_for('projects.create_project') }}">New Project</a></li>
-                    {% if current_user.is_admin %}
-                        <li><a href="{{ url_for('admin.dashboard') }}">Admin</a></li>
+<nav class="navbar">
+    <div class="navbar-inner">
+
+        <a href="{{ url_for('main.index') }}" class="navbar-brand">⟨/⟩ DevCollab</a>
+
+        <button class="mobile-menu-btn" aria-label="Toggle navigation" aria-expanded="false">
+            <span class="hamburger-box">
+                <span class="hamburger-inner"></span>
+            </span>
+        </button>
+
+        <ul class="navbar-links">
+
+            <li><a href="{{ url_for('projects.list_projects') }}">Projects</a></li>
+            <li><a href="{{ url_for('notes.list_notes') }}">Class Notebook</a></li>
+            <li><a href="{{ url_for('activity.feed') }}">Activity</a></li>
+
+            <!-- Search -->
+            <li>
+                <form action="{{ url_for('main.search') }}" method="get" class="nav-search">
+                    <input type="text" name="q" placeholder="Search..." value="{{ request.args.get('q','') }}">
+                </form>
+            </li>
+
+            {% if current_user.is_authenticated %}
+
+            <li><a href="{{ url_for('projects.create_project') }}">New Project</a></li>
+
+            {% if current_user.is_admin %}
+            <li><a href="{{ url_for('admin.dashboard') }}">Admin</a></li>
+            {% endif %}
+
+            <!-- Notifications -->
+            <li>
+                <a href="{{ url_for('user.notifications') }}" style="position:relative;">
+                    🔔
+                    {% if unread_notifications_count > 0 %}
+                    <span class="notif-badge">{{ unread_notifications_count }}</span>
                     {% endif %}
-                    <li class="nav-item">
-                        <a href="{{ url_for('user.notifications') }}" style="position: relative; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; text-decoration: none;">
-                            <span style="font-size: 1.2rem;">🔔</span>
-                            <span id="notif-badge" style="position: absolute; top: -2px; right: -2px; background: var(--danger); color: white; border-radius: 50%; width: 16px; height: 16px; font-size: 0.7rem; display: {% if unread_notifications_count > 0 %}flex{% else %}none{% endif %}; align-items: center; justify-content: center; font-weight: bold;">
-                                {{ unread_notifications_count }}
-                            </span>
-                        </a>
-                    </li>
-                    <li class="nav-item" style="position: relative; padding-right: 1rem; margin-left: 0.5rem;">
-                        <a href="#" style="vertical-align: middle; display: flex; align-items: center; gap: 0.5rem;">
-                            <img src="{{ url_for('static', filename='profile_pics/' + (current_user.profile_image or 'default.jpg')) }}" alt="Avatar" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover;">
-                            {{ current_user.username }}
-                        </a>
-                        <div class="dropdown-menu" style="display: none; position: absolute; top: 100%; right: 0; background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 4px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); min-width: 150px; z-index: 1000;">
-                            <a href="{{ url_for('user.profile', username=current_user.username) }}" style="color: white; padding: 12px 16px; text-decoration: none; display: block;">Profile</a>
-                            <a href="{{ url_for('messages.inbox') }}" style="color: white; padding: 12px 16px; text-decoration: none; display: block;">Inbox</a>
-                            <a href="{{ url_for('user.edit_profile') }}" style="color: white; padding: 12px 16px; text-decoration: none; display: block;">Settings</a>
-                            <a href="{{ url_for('auth.logout') }}" style="color: white; padding: 12px 16px; text-decoration: none; display: block;">Sign Out</a>
-                        </div>
-                    </li>
-                {% else %}
-                    <li><a href="{{ url_for('auth.login') }}">Sign In</a></li>
-                    <li><a href="{{ url_for('auth.register') }}" class="nav-cta">Get Started</a></li>
-                {% endif %}
-            </ul>
-        </div>
-    </nav>
+                </a>
+            </li>
 
-    <!-- Flash Messages -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-        <div class="flash-messages">
-            {% for category, message in messages %}
-            <div class="flash flash-{{ category }}">{{ message }}</div>
-            {% endfor %}
-        </div>
-        {% endif %}
-    {% endwith %}
+            <!-- USER DROPDOWN -->
+            <li class="nav-item dropdown">
 
-    <!-- Main Content -->
-    <main>
-        {% block content %}{% endblock %}
-    </main>
+                <a href="{{ url_for('user.profile', username=current_user.username) }}" class="user-toggle">
 
-    <!-- Footer -->
-    <footer class="footer">
-        &copy; 2026 DevCollab. Built for developers, by developers.
-    </footer>
+                    <img src="{{ url_for('static', filename='profile_pics/' ~ (current_user.profile_image or 'default.jpg')) }}"
+                        style="width:24px;height:24px;border-radius:50%;object-fit:cover;">
 
-    {% block extra_scripts %}{% endblock %}
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const userDropdown = document.querySelector('.nav-item.dropdown');
-            if (userDropdown) {
-                // Dropdown logic...
-            }
+                    {{ current_user.username }}
 
-            // Mobile menu toggle
-            const mobileBtn = document.querySelector('.mobile-menu-btn');
-            const navbarLinks = document.querySelector('.navbar-links');
-            
-            if (mobileBtn && navbarLinks) {
-                mobileBtn.addEventListener('click', function() {
-                    const isExpanded = mobileBtn.getAttribute('aria-expanded') === 'true';
-                    mobileBtn.setAttribute('aria-expanded', !isExpanded);
-                    mobileBtn.classList.toggle('is-active');
-                    navbarLinks.classList.toggle('is-active');
-                });
-            }
-        });
-    </script>
-</body>
-</html>
+                </a>
+
+                <div class="dropdown-menu">
+
+                    <a href="{{ url_for('user.profile', username=current_user.username) }}">
+                        Profile
+                    </a>
+
+                    <a href="{{ url_for('messages.inbox') }}">
+                        Inbox
+                    </a>
+
+                    <a href="{{ url_for('user.edit_profile') }}">
+                        Settings
+                    </a>
+
+                    <a href="{{ url_for('auth.logout') }}">
+                        Sign Out
+                    </a>
+
+                </div>
+
+            </li>
+
+            {% else %}
+
+            <li><a href="{{ url_for('auth.login') }}">Sign In</a></li>
+            <li><a href="{{ url_for('auth.register') }}">Get Started</a></li>
+
+            {% endif %}
+
+        </ul>
+    </div>
+</nav>

@@ -1,42 +1,90 @@
 {% extends "base.html" %}
+
 {% block title %}Projects — DevCollab{% endblock %}
 
 {% block content %}
+
 <div class="container">
+
     <div class="projects-header">
         <h1>Projects</h1>
+
         {% if current_user.is_authenticated %}
-        <a href="{{ url_for('projects.create_project') }}" class="btn btn-primary">+ New Project</a>
+        <a href="{{ url_for('projects.create_project') }}" class="btn btn-primary">
+            + New Project
+        </a>
         {% endif %}
     </div>
 
+
     {% if projects %}
+
     <div class="project-grid">
+
         {% for project in projects %}
+
         <a href="{{ url_for('projects.detail', project_id=project.id) }}" class="project-card animate-in"
-            style="animation-delay: {{ loop.index0 * 0.08 }}s;" id="project-card-{{ project.id }}">
+            id="project-card-{{ project.id }}" style="animation-delay: {{ (loop.index0 * 0.08) }}s">
+
             <h3>{{ project.name }}</h3>
-            <p>{{ project.description[:150] }}{% if project.description|length > 150 %}…{% endif %}</p>
+
+            <p>
+                {{ project.description[:150] }}
+                {% if project.description|length > 150 %}
+                …
+                {% endif %}
+            </p>
+
             <div class="project-meta">
-                <span style="display: flex; align-items: center; gap: 0.5rem;"><img
-                        src="{{ url_for('static', filename='profile_pics/' + (project.owner.profile_image or 'default.jpg')) }}"
-                        alt="Avatar" style="width: 20px; height: 20px; border-radius: 50%; object-fit: cover;"> {{
-                    project.owner.username }}</span>
+
+                <span class="project-owner">
+
+                    <img src="{{ url_for('static', filename='profile_pics/' ~ (project.owner.profile_image or 'default.jpg')) }}"
+                        alt="avatar" width="20" height="20" style="border-radius:50%;object-fit:cover;">
+
+                    {{ project.owner.username }}
+
+                </span>
+
                 <span>📝 {{ project.snippets|length }} snippets</span>
-                <span>📅 {{ project.created_at.strftime('%b %d, %Y') }}</span>
+
+                <span>
+                    📅 {{ project.created_at.strftime('%b %d, %Y') }}
+                </span>
+
             </div>
+
         </a>
+
         {% endfor %}
+
     </div>
+
+
     {% else %}
+
     <div class="empty-state glass-card">
+
         <p>No projects yet. Be the first to create one!</p>
+
         {% if current_user.is_authenticated %}
-        <a href="{{ url_for('projects.create_project') }}" class="btn btn-primary">Create Project</a>
+
+        <a href="{{ url_for('projects.create_project') }}" class="btn btn-primary">
+            Create Project
+        </a>
+
         {% else %}
-        <a href="{{ url_for('auth.register') }}" class="btn btn-primary">Get Started</a>
+
+        <a href="{{ url_for('auth.register') }}" class="btn btn-primary">
+            Get Started
+        </a>
+
         {% endif %}
+
     </div>
+
     {% endif %}
+
 </div>
+
 {% endblock %}
