@@ -1,71 +1,112 @@
 {% extends "base.html" %}
 
-{% block title %}DevCollab - Edit Profile{% endblock %}
+{% block title %}Edit Profile — DevCollab{% endblock %}
 
 {% block content %}
-<div class="form-container">
-    <h2>Edit Profile</h2>
-    
+
+<div class="container" style="max-width:700px;margin:auto;">
+
+    <h2 style="margin-bottom:25px;">Edit Profile</h2>
+
     <form method="POST" action="{{ url_for('user.edit_profile') }}" enctype="multipart/form-data">
+
         {{ form.hidden_tag() }}
-        
-        <div class="form-group" style="margin-bottom: 20px;">
-            <label style="display: block; margin-bottom: 10px;">Current Profile Picture</label>
-            <img src="{{ url_for('static', filename='profile_pics/' + (current_user.profile_image or 'default.jpg')) }}" alt="Current Profile" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; margin-bottom: 15px;">
+
+        <!-- Profile Picture -->
+        <div class="form-group" style="margin-bottom:25px;">
+            <label style="display:block;margin-bottom:10px;font-weight:600;">
+                Profile Picture
+            </label>
+
+            <img src="{{ url_for('static', filename='profile_pics/' + (current_user.profile_image or 'default.jpg')) }}"
+                alt="Profile" style="width:110px;height:110px;border-radius:50%;object-fit:cover;margin-bottom:15px;">
+
+            {{ form.profile_image(class="form-control") }}
+
+            {% for error in form.profile_image.errors %}
+            <small style="color:red;">{{ error }}</small>
+            {% endfor %}
         </div>
 
-        <div class="form-group">
-            {{ form.profile_image.label }}
-            {{ form.profile_image(class="form-control", style="margin-top: 5px;") }}
-            {% if form.profile_image.errors %}
-                <ul class="errors">
-                    {% for error in form.profile_image.errors %}
-                        <li>{{ error }}</li>
-                    {% endfor %}
-                </ul>
-            {% endif %}
-        </div>
-        
-        <div class="form-group">
+
+        <!-- Username -->
+        <div class="form-group" style="margin-bottom:20px;">
             {{ form.username.label }}
             {{ form.username(class="form-control") }}
-            {% if form.username.errors %}
-                <ul class="errors">
-                    {% for error in form.username.errors %}
-                        <li>{{ error }}</li>
-                    {% endfor %}
-                </ul>
-            {% endif %}
+
+            {% for error in form.username.errors %}
+            <small style="color:red;">{{ error }}</small>
+            {% endfor %}
         </div>
-        
-        <div class="form-group">
+
+
+        <!-- Bio -->
+        <div class="form-group" style="margin-bottom:20px;">
             {{ form.bio.label }}
-            {{ form.bio(class="form-control", rows=5) }}
-            {% if form.bio.errors %}
-                <ul class="errors">
-                    {% for error in form.bio.errors %}
-                        <li>{{ error }}</li>
-                    {% endfor %}
-                </ul>
-            {% endif %}
+            {{ form.bio(class="form-control", rows=4, placeholder="Tell people about yourself...") }}
+
+            {% for error in form.bio.errors %}
+            <small style="color:red;">{{ error }}</small>
+            {% endfor %}
         </div>
-        
-        <div class="form-group">
-            {{ form.github_link.label }}
-            {{ form.github_link(class="form-control", placeholder="https://github.com/username") }}
-            {% if form.github_link.errors %}
-                <ul class="errors">
-                    {% for error in form.github_link.errors %}
-                        <li>{{ error }}</li>
-                    {% endfor %}
-                </ul>
-            {% endif %}
+
+
+        <!-- Custom Links Section -->
+        <hr style="margin:30px 0;">
+        <h3 style="margin-bottom:15px;">Profile Links</h3>
+
+        <p style="color:#888;margin-bottom:15px;">
+            Add links like Portfolio, LinkedIn, Twitter, GitHub, Blog, etc.
+        </p>
+
+        <div class="form-group" style="margin-bottom:10px;">
+            {{ form.link_title.label }}
+            {{ form.link_title(class="form-control", placeholder="Example: Portfolio / LinkedIn / Blog") }}
         </div>
-        
-        <div class="form-group">
+
+        <div class="form-group" style="margin-bottom:20px;">
+            {{ form.link_url.label }}
+            {{ form.link_url(class="form-control", placeholder="https://example.com") }}
+        </div>
+
+
+        <!-- Save Button -->
+        <div style="margin-top:25px;display:flex;gap:10px;flex-wrap:wrap;">
+
             {{ form.submit(class="btn btn-primary") }}
-            <a href="{{ url_for('user.profile', username=current_user.username) }}" class="btn btn-secondary" style="margin-left: 10px;">Cancel</a>
+
+            <a href="{{ url_for('user.profile', username=current_user.username) }}" class="btn btn-secondary">
+                Cancel
+            </a>
+
         </div>
+
     </form>
+
+
+    <!-- Account Section -->
+    <hr style="margin:40px 0;">
+
+    <h3>Account</h3>
+
+    <div style="margin-top:15px;display:flex;gap:10px;flex-wrap:wrap;">
+
+        {% if current_user.is_authenticated %}
+
+        <a href="{{ url_for('auth.logout') }}" class="btn btn-danger">
+            Sign Out
+        </a>
+
+        {% else %}
+
+        <a href="{{ url_for('auth.login') }}" class="btn btn-primary">
+            Sign In
+        </a>
+
+        {% endif %}
+
+    </div>
+
 </div>
+
 {% endblock %}
