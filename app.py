@@ -37,6 +37,7 @@ def create_app():
     app.config.from_object(Config)
 
     # Serve static files in production
+    from whitenoise import WhiteNoise
     app.wsgi_app = WhiteNoise(app.wsgi_app, root="static/")
 
     # ----------------------------
