@@ -1,86 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>{% block title %}DevCollab{% endblock %}</title>
+
+<!-- MAIN CSS -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+</head>
+
+<body>
+
+<!-- ========================= -->
+<!-- NAVBAR -->
+<!-- ========================= -->
+
 <nav class="navbar">
-    <div class="navbar-inner">
+<div class="navbar-inner">
 
-        <a href="{{ url_for('main.index') }}" class="navbar-brand">⟨/⟩ DevCollab</a>
+<a href="{{ url_for('main.index') }}" class="navbar-brand">
+⟨/⟩ DevCollab
+</a>
 
-        <button class="mobile-menu-btn" aria-label="Toggle navigation" aria-expanded="false">
-            <span class="hamburger-box">
-                <span class="hamburger-inner"></span>
-            </span>
-        </button>
+<button class="mobile-menu-btn" id="mobileMenuBtn">
+☰
+</button>
 
-        <ul class="navbar-links">
+<ul class="navbar-links" id="navLinks">
 
-            <li><a href="{{ url_for('projects.list_projects') }}">Projects</a></li>
-            <li><a href="{{ url_for('notes.list_notes') }}">Class Notebook</a></li>
-            <li><a href="{{ url_for('activity.feed') }}">Activity</a></li>
+<li>
+<a href="{{ url_for('projects.list_projects') }}">
+Projects
+</a>
+</li>
 
-            <!-- Search -->
-            <li>
-                <form action="{{ url_for('main.search') }}" method="get" class="nav-search">
-                    <input type="text" name="q" placeholder="Search..." value="{{ request.args.get('q','') }}">
-                </form>
-            </li>
+<li>
+<a href="{{ url_for('notes.list_notes') }}">
+Class Notebook
+</a>
+</li>
 
-            {% if current_user.is_authenticated %}
+<li>
+<a href="{{ url_for('activity.feed') }}">
+Activity
+</a>
+</li>
 
-            <li><a href="{{ url_for('projects.create_project') }}">New Project</a></li>
+<!-- SEARCH -->
+<li>
+<form action="{{ url_for('main.search') }}" method="get" class="nav-search">
 
-            {% if current_user.is_admin %}
-            <li><a href="{{ url_for('admin.dashboard') }}">Admin</a></li>
-            {% endif %}
+<input
+type="text"
+name="q"
+placeholder="Search..."
+value="{{ request.args.get('q','') }}"
+>
 
-            <!-- Notifications -->
-            <li>
-                <a href="{{ url_for('user.notifications') }}" style="position:relative;">
-                    🔔
-                    {% if unread_notifications_count > 0 %}
-                    <span class="notif-badge">{{ unread_notifications_count }}</span>
-                    {% endif %}
-                </a>
-            </li>
+</form>
+</li>
 
-            <!-- USER DROPDOWN -->
-            <li class="nav-item dropdown">
+{% if current_user.is_authenticated %}
 
-                <a href="{{ url_for('user.profile', username=current_user.username) }}" class="user-toggle">
+<li>
+<a href="{{ url_for('projects.create_project') }}">
+New Project
+</a>
+</li>
 
-                    <img src="{{ url_for('static', filename='profile_pics/' ~ (current_user.profile_image or 'default.jpg')) }}"
-                        style="width:24px;height:24px;border-radius:50%;object-fit:cover;">
+{% if current_user.is_admin %}
+<li>
+<a href="{{ url_for('admin.dashboard') }}">
+Admin
+</a>
+</li>
+{% endif %}
 
-                    {{ current_user.username }}
+<!-- NOTIFICATIONS -->
 
-                </a>
+<li>
 
-                <div class="dropdown-menu">
+<a href="{{ url_for('user.notifications') }}" class="notif-link">
 
-                    <a href="{{ url_for('user.profile', username=current_user.username) }}">
-                        Profile
-                    </a>
+🔔
 
-                    <a href="{{ url_for('messages.inbox') }}">
-                        Inbox
-                    </a>
+{% if unread_notifications_count > 0 %}
 
-                    <a href="{{ url_for('user.edit_profile') }}">
-                        Settings
-                    </a>
+<span class="notif-badge">
 
-                    <a href="{{ url_for('auth.logout') }}">
-                        Sign Out
-                    </a>
+{{ unread_notifications_count }}
 
-                </div>
+</span>
 
-            </li>
+{% endif %}
 
-            {% else %}
+</a>
 
-            <li><a href="{{ url_for('auth.login') }}">Sign In</a></li>
-            <li><a href="{{ url_for('auth.register') }}">Get Started</a></li>
+</li>
 
-            {% endif %}
+<!-- USER DROPDOWN -->
 
-        </ul>
-    </div>
+<li class="dropdown">
+
+<a href="#" class="user-toggle" id="userToggle">
+
+<img
+src="{{ url_for('static', filename='profile_pics/' ~ (current_user.profile_image if current_user.profile_image else 'default.jpg')) }}"
+class="avatar"
+>
+
+<span>
+
+{{ current_user.username }}
+
+</span>
+
+</a>
+
+<div class="dropdown-menu" id="userMenu">
+
+<a href="{{ url_for('user.profile', username=current_user.username) }}">
+Profile
+</a>
+
+<a href="{{ url_for('messages.inbox') }}">
+Inbox
+</a>
+
+<a href="{{ url_for('user.edit_profile') }}">
+Settings
+</a>
+
+<a href="{{ url_for('auth.logout') }}">
+Sign Out
+</a>
+
+</div>
+
+</li>
+
+{% else %}
+
+<li>
+<a href="{{ url_for('auth.login') }}">
+Sign In
+</a>
+</li>
+
+<li>
+<a href="{{ url_for('auth.register') }}">
+Get Started
+</a>
+</li>
+
+{% endif %}
+
+</ul>
+
+</div>
 </nav>
+
+<!-- ========================= -->
+<!-- FLASH MESSAGES -->
+<!-- ========================= -->
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+
+<div class="flash-container">
+
+{% for category, message in messages %}
+
+<div class="flash {{ category }}">
+
+{{ message }}
+
+</div>
+
+{% endfor %}
+
+</div>
+
+{% endif %}
+{% endwith %}
+
+<!-- ========================= -->
+<!-- MAIN CONTENT -->
+<!-- ========================= -->
+
+<main class="container">
+
+{% block content %}
+
+{% endblock %}
+
+</main>
+
+<!-- ========================= -->
+<!-- FOOTER -->
+<!-- ========================= -->
+
+<footer class="footer">
+
+© 2026 DevCollab
+
+</footer>
+
+<!-- ========================= -->
+<!-- SCRIPTS -->
+<!-- ========================= -->
+
+<script>
+
+document.addEventListener("DOMContentLoaded", function(){
+
+/* MOBILE MENU */
+
+const mobileBtn = document.getElementById("mobileMenuBtn")
+const navLinks = document.getElementById("navLinks")
+
+if(mobileBtn){
+
+mobileBtn.addEventListener("click", function(){
+
+navLinks.classList.toggle("active")
+
+})
+
+}
+
+/* USER DROPDOWN */
+
+const userToggle = document.getElementById("userToggle")
+const userMenu = document.getElementById("userMenu")
+
+if(userToggle){
+
+userToggle.addEventListener("click", function(e){
+
+e.preventDefault()
+
+userMenu.classList.toggle("show")
+
+})
+
+}
+
+})
+
+</script>
+
+</body>
+</html>
