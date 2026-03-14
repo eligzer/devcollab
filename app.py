@@ -4,8 +4,8 @@ import logging
 from flask import Flask, render_template
 from flask_login import LoginManager, current_user
 from flask_wtf.csrf import CSRFProtect
-
 from sqlalchemy import text
+from whitenoise import WhiteNoise
 
 from config import Config
 from models import db, User, Notification
@@ -33,8 +33,11 @@ limiter = Limiter(
 
 def create_app():
 
-    app = Flask(__name__)
+    app = Flask(__name__, static_folder="static")
     app.config.from_object(Config)
+
+    # Serve static files in production
+    app.wsgi_app = WhiteNoise(app.wsgi_app, root="static/")
 
     # ----------------------------
     # Logging
@@ -73,13 +76,11 @@ def create_app():
 
             db.create_all()
 
-            # Fix notifications table
             db.session.execute(text("""
                 ALTER TABLE notifications
                 ADD COLUMN IF NOT EXISTS link VARCHAR(255)
             """))
 
-            # Fix activity_log schema
             db.session.execute(text("""
                 ALTER TABLE activity_log
                 ADD COLUMN IF NOT EXISTS action VARCHAR(50)
@@ -110,7 +111,7 @@ def create_app():
             app.logger.error(f"Database initialization error: {e}")
 
     # ----------------------------
-    # Flask-Login Loader
+    # Flask Login Loader
     # ----------------------------
 
     @login_manager.user_loader
@@ -118,7 +119,6 @@ def create_app():
 
         try:
             return User.query.get(int(user_id))
-
         except Exception as e:
             app.logger.error(f"User loader error: {e}")
             return None
@@ -196,50 +196,6 @@ def create_app():
 
         return render_template("errors/500.html"), 500
 
-    # ----------------------------
-    # CLI Command
-    # ----------------------------
-
-    @app.cli.command("init-db")
-    def init_db():
-
-        try:
-
-            db.create_all()
-
-            admin_username = os.environ.get("ADMIN_USERNAME", "admin")
-            admin_password = os.environ.get("ADMIN_PASSWORD", "elixer")
-            admin_email = os.environ.get("ADMIN_EMAIL", "admin@example.com")
-
-            admin = User.query.filter_by(username=admin_username).first()
-
-            if not admin:
-
-                admin = User(
-                    username=admin_username,
-                    email=admin_email,
-                    is_admin=True
-                )
-
-                admin.set_password(admin_password)
-
-                db.session.add(admin)
-                db.session.commit()
-
-                print("Admin user created")
-
-            else:
-
-                admin.set_password(admin_password)
-                db.session.commit()
-
-                print("Admin password synced")
-
-        except Exception as e:
-
-            db.session.rollback()
-            print("Database initialization error:", e)
-
     return app
 
 
@@ -247,11 +203,15 @@ def create_app():
 # App Instance
 # ----------------------------
 
-# ----------------------------
-# App Instance
-# ----------------------------
+app = create_app()
 
-import os
+
+# ----------------------------
+# Local Development
+# ----------------------------
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
+    app.run(
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 10000))
+    )
