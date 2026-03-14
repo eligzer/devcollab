@@ -170,7 +170,7 @@ def handle_note_edit(data):
 
 @socketio.on('note_update')
 def handle_note_update(data):
-    """ Broadcasts content changes to peers """
+    """ Broadcasts content changes (deltas) to peers """
     if not current_user.is_authenticated:
         return
     try:
@@ -178,11 +178,12 @@ def handle_note_update(data):
     except (TypeError, ValueError):
         return
         
-    content = data.get('content', '')
-    note_buffers[note_id] = content # Update buffer
-    
+    delta = data.get('delta')
+    if not delta:
+        return
+        
     room_name = f"note_{note_id}"
-    emit('note_content_update', {'user_id': current_user.id, 'content': content}, room=room_name, include_self=False)
+    emit('note_content_update', {'user_id': current_user.id, 'delta': delta}, room=room_name, include_self=False)
 
 @socketio.on('note_save')
 def handle_note_save(data):

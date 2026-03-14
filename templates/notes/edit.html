@@ -191,104 +191,16 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // --- Collaborative Socket Logic ---
+    // --- Collaborative Socket Logic (Externalized) ---
+    </script>
+    <script src="{{ url_for('static', filename='js/collaboration.js') }}"></script>
+    <script>
     const NOTE_ID = {{ note.id }};
-    let isRemoteUpdate = false;
-    let typingTimeout;
-    let isDirty = false;
-
     if (window.socket) {
-        // 1. Join room
-        window.socket.emit('note_join', { note_id: NOTE_ID }, function(response) {
-            if (response && response.status === 'success' && response.content) {
-                // If the remote buffer has content, load it.
-                // We use isRemoteUpdate flag to prevent our own load from triggering a note_update back.
-                isRemoteUpdate = true;
-                easymde.value(response.content);
-                isRemoteUpdate = false;
-            }
-        });
-
-        // 2. Transmit changes
-        easymde.codemirror.on('change', function(cm, changeObj) {
-            if (!isRemoteUpdate) {
-                isDirty = true;
-                window.socket.emit('note_edit', { note_id: NOTE_ID });
-                window.socket.emit('note_update', { note_id: NOTE_ID, content: easymde.value() });
-            }
-        });
-
-        // 3. Receive changes from others
-        window.socket.on('note_content_update', function(data) {
-            // Save cursor position to prevent jumping
-            const cursor = easymde.codemirror.getCursor();
-            const scrollInfo = easymde.codemirror.getScrollInfo();
-            
-            isRemoteUpdate = true;
-            easymde.value(data.content);
-            isRemoteUpdate = false;
-            
-            // Restore cursor
-            easymde.codemirror.setCursor(cursor);
-            easymde.codemirror.scrollTo(scrollInfo.left, scrollInfo.top);
-        });
-
-        // 4. Handle Typing / Conflict Ribbon
-        const editStatusText = document.getElementById('edit-conflict-status');
-        window.socket.on('user_editing', function(data) {
-            editStatusText.textContent = data.username + ' is editing...';
-            editStatusText.style.opacity = '1';
-            
-            clearTimeout(typingTimeout);
-            typingTimeout = setTimeout(() => {
-                editStatusText.style.opacity = '0';
-            }, 2500); // fade out after 2.5s of no typing
-        });
-
-        // 5. Active Editors UI
-        const editorsListUi = document.getElementById('active-editors-list');
-        window.socket.on('active_editors_update', function(data) {
-            editorsListUi.innerHTML = ''; // clear
-            const editors = data.editors || [];
-            if (editors.length === 0) {
-                editorsListUi.innerHTML = '<span class="text-muted text-sm" style="font-style: italic;">Just you</span>';
-            } else {
-                let html = '';
-                editors.forEach(ed => {
-                    const avatarUrl = "{{ url_for('static', filename='profile_pics/') }}" + ed.avatar;
-                    html += `<div style="display: flex; align-items: center; gap: 4px; background: rgba(0,0,0,0.05); padding: 2px 8px; border-radius: 12px; margin-right: 5px;">
-                                <img src="${avatarUrl}" alt="Avatar" style="width: 20px; height: 20px; border-radius: 50%; object-fit: cover;">
-                                <span class="text-sm font-weight-bold" style="line-height: 1;">${ed.username}</span>
-                             </div>`;
-                });
-                editorsListUi.innerHTML = html;
-            }
-        });
-
-        // 6. Leave Room on Unload
-        window.addEventListener('beforeunload', function() {
-            window.socket.emit('note_leave', { note_id: NOTE_ID });
-        });
-        
-        // 7. Auto-save Loop
-        setInterval(() => {
-            if (isDirty) {
-                window.socket.emit('note_save', { note_id: NOTE_ID, content: easymde.value() }, function(res) {
-                    if(res && res.status === 'success') {
-                        isDirty = false;
-                    }
-                });
-            }
-        }, 5000); // 5 seconds
-        
-        window.socket.on('note_saved', function(data) {
-             // Optional: Show a subtle "Saved at 5:00 PM" indicator, maybe share the conflict status ribon
-             editStatusText.textContent = 'Auto-saved at ' + data.updated_at;
-             editStatusText.style.opacity = '0.7';
-             clearTimeout(typingTimeout);
-             typingTimeout = setTimeout(() => {
-                 editStatusText.style.opacity = '0';
-             }, 3000);
+        window.collaborationManager = new window.CollaborationManager({
+            socket: window.socket,
+            noteId: NOTE_ID,
+            easymde: easymde
         });
     }
 

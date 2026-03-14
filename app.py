@@ -84,7 +84,7 @@ def create_app():
         return dict(unread_notifications_count=0)
 
     # Import socket events
-    import events
+    import socket_events
 
     # Database initialization
     with app.app_context():
