@@ -17,7 +17,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
 from extensions import socketio
-from flask_logi import current_user
+from flask_login import current_user
 from flask_socketio import emit
 
 
