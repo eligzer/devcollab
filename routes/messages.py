@@ -117,57 +117,62 @@ def join_chat(data):
 
 @socketio.on("send_message")
 def handle_send_message(data):
+    try:
 
-    room = data["room"]
-    content = data["message"]
+        room = data["room"]
+        username = data["username"]
+        content = data["message"]
 
-    sender = current_user
+        sender = User.query.filter_by(
+            username=username
+        ).first()
 
-    # extract receiver id
+        if not sender:
+            return
 
-    ids = room.replace("chat_", "").split("_")
+        ids = room.replace("chat_", "").split("_")
 
-    user1 = int(ids[0])
-    user2 = int(ids[1])
+        user1 = int(ids[0])
+        user2 = int(ids[1])
 
-    receiver_id = user2 if sender.id == user1 else user1
+        receiver_id = user2 if sender.id == user1 else user1
 
+        msg = Message(
+            sender_id=sender.id,
+            receiver_id=receiver_id,
+            content=content
+        )
 
-    # save message
+        db.session.add(msg)
 
-    msg = Message(
-        sender_id=sender.id,
-        receiver_id=receiver_id,
-        content=content
-    )
+        notif = Notification(
+            user_id=receiver_id,
+            message=f"New message from {username}"
+        )
 
-    db.session.add(msg)
+        db.session.add(notif)
 
+        db.session.commit()
 
-    # notification
+        emit(
+            "receive_message",
+            {
+                "username": username,
+                "message": content
+            },
+            room=room
+        )
 
-    notif = Notification(
-        user_id=receiver_id,
-        message=f"New message from {sender.username}"
-    )
+        log_activity(
+            sender.id,
+            "send_message",
+            "message",
+            msg.id,
+            f"{username} sent a message"
+        )
 
-    db.session.add(notif)
-
-    db.session.commit()
-
-
-    # emit realtime message
-
-    emit(
-        "receive_message",
-        {
-            "username": sender.username,
-            "sender_id": sender.id,
-            "message": content,
-            "timestamp": msg.created_at.strftime("%H:%M")
-        },
-        room=room
-    )
+    except Exception as e:
+        print("Socket error:", e)
 
 
     log_activity(
