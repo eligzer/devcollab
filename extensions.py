@@ -6,3 +6,5 @@ socketio = SocketIO(
     logger=True,
     engineio_logger=True
 )
+
+online_users = set()

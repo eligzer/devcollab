@@ -16,9 +16,9 @@ from models import db, User, Notification
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
-from extensions import socketio
+from extensions import socketio, online_users
 from flask_login import current_user
-from flask_socketio import emit
+from flask_socketio import emit, join_room
 
 
 # ----------------------------
@@ -33,7 +33,7 @@ limiter = Limiter(
     default_limits=["200 per day", "50 per hour"]
 )
 
-online_users = set()
+# Extensions are initialized in extensions.py
 
 # ----------------------------
 # Application Factory
@@ -138,7 +138,6 @@ def create_app():
     from routes.admin import admin_bp
     from routes.user import user_bp
     from routes.messages import messages_bp
-    import routes.messages
     from routes.ai import ai_bp
 
     app.register_blueprint(main_bp)

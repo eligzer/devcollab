@@ -3,9 +3,8 @@ from flask_login import login_required, current_user
 from models import db, Message, User, Notification
 from utils import log_activity
 
-from extensions import socketio
+from extensions import socketio, online_users
 from flask_socketio import join_room, emit
-from app import online_users
 
 
 messages_bp = Blueprint(
