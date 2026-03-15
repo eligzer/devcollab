@@ -7,7 +7,7 @@ import logging
 from flask import Flask, render_template
 from flask_login import LoginManager, current_user
 from flask_wtf.csrf import CSRFProtect
-
+from flask_socketio import join_room
 from sqlalchemy import text
 
 from config import Config
@@ -16,6 +16,7 @@ from models import db, User, Notification
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
+from extensions import socketio
 
 
 # ----------------------------
@@ -24,8 +25,6 @@ from flask_limiter.util import get_remote_address
 
 login_manager = LoginManager()
 csrf = CSRFProtect()
-
-from extensions import socketio
 
 limiter = Limiter(
     key_func=get_remote_address,
@@ -87,41 +86,19 @@ def create_app():
 
             db.create_all()
 
-            # safe migration checks
-            try:
-                db.session.execute(text(
-                    "ALTER TABLE notifications ADD COLUMN link VARCHAR(255)"
-                ))
-            except:
-                pass
+            migrations = [
+                "ALTER TABLE notifications ADD COLUMN link VARCHAR(255)",
+                "ALTER TABLE activity_log ADD COLUMN action VARCHAR(50)",
+                "ALTER TABLE activity_log ADD COLUMN target_type VARCHAR(50)",
+                "ALTER TABLE activity_log ADD COLUMN target_id INTEGER",
+                "ALTER TABLE activity_log ADD COLUMN description TEXT"
+            ]
 
-            try:
-                db.session.execute(text(
-                    "ALTER TABLE activity_log ADD COLUMN action VARCHAR(50)"
-                ))
-            except:
-                pass
-
-            try:
-                db.session.execute(text(
-                    "ALTER TABLE activity_log ADD COLUMN target_type VARCHAR(50)"
-                ))
-            except:
-                pass
-
-            try:
-                db.session.execute(text(
-                    "ALTER TABLE activity_log ADD COLUMN target_id INTEGER"
-                ))
-            except:
-                pass
-
-            try:
-                db.session.execute(text(
-                    "ALTER TABLE activity_log ADD COLUMN description TEXT"
-                ))
-            except:
-                pass
+            for migration in migrations:
+                try:
+                    db.session.execute(text(migration))
+                except:
+                    pass
 
             db.session.commit()
 
@@ -237,23 +214,30 @@ app = create_app()
 @socketio.on("join_chat")
 def handle_join(data):
 
-    room = data["room"]
-    join_room(room)
+    room = data.get("room")
+    if room:
+        join_room(room)
 
 
 @socketio.on("send_message")
 def handle_send(data):
 
-    room = data["room"]
+    room = data.get("room")
+    username = data.get("username")
+    message = data.get("message")
+
+    if not room or not message:
+        return
 
     socketio.emit(
         "receive_message",
         {
-            "username": data["username"],
-            "message": data["message"]
+            "username": username,
+            "message": message
         },
         room=room
     )
+
 
 @socketio.on("typing")
 def handle_typing(data):
@@ -261,9 +245,9 @@ def handle_typing(data):
     socketio.emit(
         "user_typing",
         {
-            "username": data["username"]
+            "username": data.get("username")
         },
-        room=data["room"],
+        room=data.get("room"),
         include_self=False
     )
 
@@ -274,9 +258,10 @@ def handle_stop_typing(data):
     socketio.emit(
         "user_stop_typing",
         {},
-        room=data["room"],
+        room=data.get("room"),
         include_self=False
     )
+
 
 # ----------------------------
 # Run Server
