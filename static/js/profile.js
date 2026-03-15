@@ -1,17 +1,37 @@
 document.addEventListener("DOMContentLoaded", function () {
 
-const wrapper = document.querySelector(".profile-wrapper");
+const avatar = document.querySelector(".profile-avatar");
 const menu = document.getElementById("profileMenu");
 
-if(!wrapper || !menu) return;
+if(!avatar || !menu) return;
 
-wrapper.addEventListener("click", function(e){
+
+/* open / close dropdown */
+
+avatar.addEventListener("click", function(e){
+
 e.stopPropagation();
+
 menu.classList.toggle("active");
+
 });
 
+
+/* prevent closing when clicking menu */
+
+menu.addEventListener("click", function(e){
+
+e.stopPropagation();
+
+});
+
+
+/* close when clicking outside */
+
 document.addEventListener("click", function(){
+
 menu.classList.remove("active");
+
 });
 
 });

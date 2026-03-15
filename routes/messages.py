@@ -1,23 +1,30 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import Blueprint, render_template, redirect, url_for, flash
 from flask_login import login_required, current_user
 from models import db, Message, User, Notification
 from utils import log_activity
 
-# import socketio from app
 from extensions import socketio
+from flask_socketio import join_room, emit
+from app import online_users
 
-messages_bp = Blueprint('messages', __name__, url_prefix='/messages')
+
+messages_bp = Blueprint(
+    "messages",
+    __name__,
+    url_prefix="/messages"
+)
 
 
-# ----------------------------
+# =====================================================
 # Inbox
-# ----------------------------
-@messages_bp.route('/inbox')
+# =====================================================
+
+@messages_bp.route("/inbox")
 @login_required
 def inbox():
 
     subquery = db.session.query(
-        db.func.max(Message.id).label('max_id')
+        db.func.max(Message.id).label("max_id")
     ).filter(
         (Message.sender_id == current_user.id) |
         (Message.receiver_id == current_user.id)
@@ -29,36 +36,46 @@ def inbox():
     ).subquery()
 
     latest_messages = Message.query.join(
-        subquery, Message.id == subquery.c.max_id
+        subquery,
+        Message.id == subquery.c.max_id
     ).order_by(Message.created_at.desc()).all()
 
     return render_template(
-        'messages/inbox.html',
+        "messages/inbox.html",
         latest_messages=latest_messages
     )
 
 
-# ----------------------------
+# =====================================================
 # Conversation Page
-# ----------------------------
-@messages_bp.route('/conversation/<username>')
+# =====================================================
+
+@messages_bp.route("/conversation/<username>")
 @login_required
 def conversation(username):
 
-    other_user = User.query.filter_by(username=username).first_or_404()
+    other_user = User.query.filter_by(
+        username=username
+    ).first_or_404()
 
     if other_user == current_user:
-        flash('You cannot message yourself.', 'warning')
-        return redirect(url_for('messages.inbox'))
+
+        flash("You cannot message yourself.", "warning")
+
+        return redirect(url_for("messages.inbox"))
 
     messages = Message.query.filter(
+
         ((Message.sender_id == current_user.id) &
          (Message.receiver_id == other_user.id)) |
+
         ((Message.sender_id == other_user.id) &
          (Message.receiver_id == current_user.id))
+
     ).order_by(Message.created_at.asc()).all()
 
     # mark messages as read
+
     unread = [
         m for m in messages
         if m.receiver_id == current_user.id and not m.is_read
@@ -71,67 +88,93 @@ def conversation(username):
         db.session.commit()
 
     return render_template(
-        'messages/conversation.html',
-        other_user=other_user,
-        messages=messages
-    )
+    "messages/conversation.html",
+    other_user=other_user,
+    messages=messages,
+    is_online=other_user.id in online_users
+)
+
+
+# =====================================================
+# SOCKET.IO EVENTS
+# =====================================================
 
 
 # ----------------------------
-# Send Message (Realtime)
+# Join Chat Room
 # ----------------------------
-@messages_bp.route('/send_message/<username>', methods=['POST'])
-@login_required
-def send_message(username):
 
-    other_user = User.query.filter_by(username=username).first_or_404()
+@socketio.on("join_chat")
+def join_chat(data):
 
-    content = request.form.get('content', '').strip()
+    room = data["room"]
 
-    if not content:
-        flash('Message cannot be empty.', 'danger')
-        return redirect(url_for('messages.conversation', username=username))
+    join_room(room)
 
-    if other_user == current_user:
-        flash('You cannot message yourself.', 'warning')
-        return redirect(url_for('messages.inbox'))
+
+# ----------------------------
+# Send Message
+# ----------------------------
+
+@socketio.on("send_message")
+def handle_send_message(data):
+
+    room = data["room"]
+    content = data["message"]
+
+    sender = current_user
+
+    # extract receiver id
+
+    ids = room.replace("chat_", "").split("_")
+
+    user1 = int(ids[0])
+    user2 = int(ids[1])
+
+    receiver_id = user2 if sender.id == user1 else user1
+
 
     # save message
+
     msg = Message(
-        sender_id=current_user.id,
-        receiver_id=other_user.id,
+        sender_id=sender.id,
+        receiver_id=receiver_id,
         content=content
     )
 
     db.session.add(msg)
 
+
+    # notification
+
     notif = Notification(
-        user_id=other_user.id,
-        message=f'New message from {current_user.username}'
+        user_id=receiver_id,
+        message=f"New message from {sender.username}"
     )
 
     db.session.add(notif)
 
     db.session.commit()
 
-    log_activity(
-        current_user.id,
-        'send_message',
-        'message',
-        msg.id,
-        f'{current_user.username} sent a message to {other_user.username}'
-    )
 
-    # 🔥 emit realtime message
-    room = f"chat_{min(current_user.id, other_user.id)}_{max(current_user.id, other_user.id)}"
+    # emit realtime message
 
-    socketio.emit(
+    emit(
         "receive_message",
         {
-            "username": current_user.username,
-            "message": content
+            "username": sender.username,
+            "sender_id": sender.id,
+            "message": content,
+            "timestamp": msg.created_at.strftime("%H:%M")
         },
         room=room
     )
 
-    return redirect(url_for('messages.conversation', username=username))
+
+    log_activity(
+        sender.id,
+        "send_message",
+        "message",
+        msg.id,
+        f"{sender.username} sent a message"
+    )

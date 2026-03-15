@@ -18,7 +18,7 @@
 <body>
 
 
-<!-- NAVBAR -->
+<!-- ================= NAVBAR ================= -->
 
 <nav class="navbar">
 
@@ -28,27 +28,26 @@
 DevCollab
 </a>
 
+<!-- Mobile Menu Button -->
 
-<ul class="navbar-links">
+<button class="mobile-menu-btn" id="mobileMenuBtn">
+☰
+</button>
+
+
+<ul class="navbar-links" id="navbarLinks">
 
 <li>
-<a href="{{ url_for('projects.list_projects') }}">
-Projects
-</a>
+<a href="{{ url_for('projects.list_projects') }}">Projects</a>
 </li>
 
 <li>
-<a href="{{ url_for('notes.list_notes') }}">
-Class Notebook
-</a>
+<a href="{{ url_for('notes.list_notes') }}">Class Notebook</a>
 </li>
 
 <li>
-<a href="{{ url_for('activity.feed') }}">
-Activity
-</a>
+<a href="{{ url_for('activity.feed') }}">Activity</a>
 </li>
-
 
 <li>
 
@@ -65,27 +64,19 @@ style="width:180px;">
 
 </li>
 
-
 <li>
-<a href="{{ url_for('projects.create_project') }}">
-New Project
-</a>
+<a href="{{ url_for('projects.create_project') }}">New Project</a>
 </li>
 
 
 {% if current_user.is_authenticated %}
 
 <li>
-<a href="{{ url_for('admin.dashboard') }}">
-Admin
-</a>
+<a href="{{ url_for('admin.dashboard') }}">Admin</a>
 </li>
 
-
 <li>
-<a href="{{ url_for('user.notifications') }}">
-🔔
-</a>
+<a href="{{ url_for('user.notifications') }}">🔔</a>
 </li>
 
 
@@ -96,8 +87,7 @@ Admin
 <img
 src="{{ url_for('static', filename='profile_pics/' + (current_user.profile_image or 'default.jpg')) }}"
 class="profile-avatar"
-onclick="toggleProfileMenu()">
-
+id="profileAvatar">
 
 <div class="profile-dropdown" id="profileMenu">
 
@@ -124,9 +114,7 @@ Sign Out
 {% else %}
 
 <li>
-<a href="{{ url_for('auth.login') }}">
-Login
-</a>
+<a href="{{ url_for('auth.login') }}">Login</a>
 </li>
 
 {% endif %}
@@ -138,7 +126,7 @@ Login
 </nav>
 
 
-<!-- FLASH MESSAGES -->
+<!-- ================= FLASH MESSAGES ================= -->
 
 <div class="container">
 
@@ -161,7 +149,7 @@ Login
 </div>
 
 
-<!-- MAIN CONTENT -->
+<!-- ================= MAIN CONTENT ================= -->
 
 <div class="container">
 
@@ -171,56 +159,48 @@ Login
 </div>
 
 
-<!-- FOOTER -->
+<!-- ================= FOOTER ================= -->
 
 <footer class="footer">
 DevCollab © 2026
 </footer>
 
 
-<!-- ============================= -->
-<!-- SOCKET.IO (Required for chat) -->
-<!-- ============================= -->
+
+<!-- ================= SOCKET.IO ================= -->
 
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
 
-<!-- PROFILE DROPDOWN SCRIPT -->
+
+<!-- ================= MOBILE NAVBAR SCRIPT ================= -->
 
 <script>
 
-function toggleProfileMenu(){
+const menuBtn = document.getElementById("mobileMenuBtn");
+const navLinks = document.getElementById("navbarLinks");
 
-const menu = document.getElementById("profileMenu");
+if(menuBtn && navLinks){
 
-menu.classList.toggle("active");
+menuBtn.addEventListener("click", function(){
 
-}
-
-document.addEventListener("click",function(e){
-
-const wrapper = document.querySelector(".profile-wrapper");
-
-if(wrapper && !wrapper.contains(e.target)){
-
-const menu = document.getElementById("profileMenu");
-
-if(menu){
-menu.classList.remove("active");
-}
-
-}
+navLinks.classList.toggle("mobile-open");
 
 });
+
+}
 
 </script>
 
 
-<!-- load site JS -->
+
+<!-- ================= PROFILE DROPDOWN SCRIPT ================= -->
 
 <script src="{{ url_for('static', filename='js/profile.js') }}"></script>
 
-<!-- load real-time chat JS -->
+
+
+<!-- ================= CHAT SCRIPT ================= -->
 
 <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
 

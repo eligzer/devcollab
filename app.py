@@ -17,6 +17,8 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
 from extensions import socketio
+from flask_logi import current_user
+from flask_socketio import emit
 
 
 # ----------------------------
@@ -31,6 +33,7 @@ limiter = Limiter(
     default_limits=["200 per day", "50 per hour"]
 )
 
+online_users = set()
 
 # ----------------------------
 # Application Factory
@@ -135,6 +138,7 @@ def create_app():
     from routes.admin import admin_bp
     from routes.user import user_bp
     from routes.messages import messages_bp
+    import routes.messages
     from routes.ai import ai_bp
 
     app.register_blueprint(main_bp)
@@ -206,6 +210,42 @@ def create_app():
 
 app = create_app()
 
+# =========================
+# USER CONNECTED
+# =========================
+
+@socketio.on("connect")
+def user_connected():
+
+    if current_user.is_authenticated:
+
+        online_users.add(current_user.id)
+
+        emit(
+            "user_online",
+            {"user_id": current_user.id},
+            broadcast=True
+        )
+
+
+# =========================
+# USER DISCONNECTED
+# =========================
+
+@socketio.on("disconnect")
+def user_disconnected():
+
+    if current_user.is_authenticated:
+
+        if current_user.id in online_users:
+            online_users.remove(current_user.id)
+
+        emit(
+            "user_offline",
+            {"user_id": current_user.id},
+            broadcast=True
+        )
+
 
 # ----------------------------
 # SocketIO Events
@@ -270,8 +310,8 @@ def handle_stop_typing(data):
 if __name__ == "__main__":
 
     socketio.run(
-        app,
-        host="0.0.0.0",
-        port=int(os.environ.get("PORT", 10000)),
-        debug=True
-    )
+    app,
+    host="0.0.0.0",
+    port=10000,
+    debug=False
+)

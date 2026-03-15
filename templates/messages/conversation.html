@@ -6,30 +6,49 @@
 
 <div class="chat-container">
 
+    <!-- CHAT HEADER -->
     <div class="chat-header">
-        Chat with {{ other_user.username }}
+
+    <div class="chat-user">
+
+    {{ other_user.username }}
+
+    <span
+    id="onlineStatus"
+    class="status {% if is_online %}online{% else %}offline{% endif %}"
+    >
+    {% if is_online %}
+    ● Online
+    {% else %}
+    ● Offline
+    {% endif %}
+    </span>
+
+    </div>
+
     </div>
 
 
+    <!-- CHAT MESSAGES -->
     <div id="chatBox" class="chat-box">
 
         {% for message in messages %}
 
             {% if message.sender_id == current_user.id %}
 
-                <div class="chat-message me">
-                    <div class="bubble">
-                        {{ message.content }}
-                    </div>
+            <div class="chat-message me">
+                <div class="bubble">
+                    {{ message.content }}
                 </div>
+            </div>
 
             {% else %}
 
-                <div class="chat-message them">
-                    <div class="bubble">
-                        {{ message.content }}
-                    </div>
+            <div class="chat-message them">
+                <div class="bubble">
+                    {{ message.content }}
                 </div>
+            </div>
 
             {% endif %}
 
@@ -37,9 +56,12 @@
 
     </div>
 
+
+    <!-- TYPING INDICATOR -->
     <div id="typingIndicator" class="typing-indicator"></div>
 
 
+    <!-- MESSAGE INPUT -->
     <div class="chat-input-area">
 
         <input
@@ -51,9 +73,7 @@
         <button
             id="chatSend"
             class="btn btn-primary">
-
             Send
-
         </button>
 
     </div>
@@ -61,128 +81,46 @@
 </div>
 
 
-<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<!-- ================================= -->
+<!-- CHAT VARIABLES FOR chat.js -->
+<!-- ================================= -->
 
 <script>
 
-const socket = io()
+window.chatUsername = "{{ current_user.username }}";
+window.chatUserId = {{ current_user.id }};
+window.chatOtherId = {{ other_user.id }};
 
-const chatBox = document.getElementById("chatBox")
-const input = document.getElementById("chatInput")
-let typingTimeout
+socket.on("user_online", function(data){
 
-input.addEventListener("input", function(){
+if(data.user_id == otherId){
 
-    socket.emit("typing", {
-        room: room,
-        username: username
-    })
+const status = document.getElementById("onlineStatus")
 
-    clearTimeout(typingTimeout)
+status.innerText = "● Online"
+status.classList.remove("offline")
+status.classList.add("online")
 
-    typingTimeout = setTimeout(function(){
-
-        socket.emit("stop_typing", {
-            room: room
-        })
-
-    },1000)
-
-})
-const sendBtn = document.getElementById("chatSend")
-
-const username = "{{ current_user.username }}"
-const otherUser = "{{ other_user.username }}"
-const room = "chat_{{ current_user.id }}_{{ other_user.id }}"
-
-
-
-/* join room */
-
-socket.emit("join_chat", {
-    room: room
-})
-
-
-
-/* receive message */
-
-socket.on("receive_message", function(data){
-
-    const msg = document.createElement("div")
-    msg.classList.add("chat-message")
-
-    if(data.username === username){
-        msg.classList.add("me")
-    } else {
-        msg.classList.add("them")
-    }
-
-    msg.innerHTML =
-        '<div class="bubble">'+ data.message +'</div>'
-
-    chatBox.appendChild(msg)
-
-    chatBox.scrollTop = chatBox.scrollHeight
-})
-
-
-socket.on("user_typing", function(data){
-
-    const indicator = document.getElementById("typingIndicator")
-
-    indicator.innerText = data.username + " is typing..."
-
-})
-
-
-socket.on("user_stop_typing", function(){
-
-    const indicator = document.getElementById("typingIndicator")
-
-    indicator.innerText = ""
-
-})
-
-
-/* send message */
-
-function sendMessage(){
-
-    const message = input.value.trim()
-
-    if(message === "") return
-
-    socket.emit("send_message", {
-        room: room,
-        username: username,
-        message: message
-    })
-
-    input.value = ""
 }
 
-
-
-sendBtn.onclick = sendMessage
-
-
-
-input.addEventListener("keypress", function(e){
-
-    if(e.key === "Enter"){
-        sendMessage()
-    }
-
 })
 
 
+socket.on("user_offline", function(data){
 
-/* auto scroll */
+if(data.user_id == otherId){
 
-chatBox.scrollTop = chatBox.scrollHeight
+const status = document.getElementById("onlineStatus")
 
+status.innerText = "● Offline"
+status.classList.remove("online")
+status.classList.add("offline")
+
+}
+
+})
 
 </script>
+
 
 {% endblock %}

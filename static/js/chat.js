@@ -1,131 +1,97 @@
-const socket = io();
+if (typeof io !== "undefined") {
 
-const chatBox = document.getElementById("chatBox");
-const chatInput = document.getElementById("chatInput");
-const sendBtn = document.getElementById("chatSend");
+    const chatBox = document.getElementById("chatBox")
+    const input = document.getElementById("chatInput")
+    const sendBtn = document.getElementById("chatSend")
+    const typingIndicator = document.getElementById("typingIndicator")
 
-const username = window.chatUsername;
-const room = window.chatRoom;
+    if (!chatBox || !input || !sendBtn) {
+        console.log("Chat not active on this page")
+    } else {
 
-/* stop if not chat page */
+        const socket = io(location.origin)
 
-if(!chatBox) return;
+        socket.on("connect", () => {
+            console.log("Socket connected:", socket.id)
+        })
 
+        const username = window.chatUsername
+        const userId = window.chatUserId
+        const otherId = window.chatOtherId
 
-/* join chat room */
+        const room = "chat_" + [userId, otherId].sort().join("_")
 
-socket.emit("join_chat", {
-    room: room
-});
+        socket.emit("join_chat", { room: room })
 
+        function sendMessage(){
 
-/* send message */
+            const message = input.value.trim()
 
-function sendMessage(){
+            if(message === "") return
 
-    const message = chatInput.value.trim();
+            socket.emit("send_message", {
+                room: room,
+                username: username,
+                message: message
+            })
 
-    if(message === "") return;
+            input.value = ""
+        }
 
-    socket.emit("send_message",{
-        room: room,
-        username: username,
-        message: message
-    });
+        sendBtn.onclick = sendMessage
 
-    chatInput.value = "";
+        input.addEventListener("keypress", function(e){
+            if(e.key === "Enter"){
+                sendMessage()
+            }
+        })
 
-    socket.emit("stop_typing",{
-        room: room
-    });
-}
+        socket.on("receive_message", function(data){
 
+            const msg = document.createElement("div")
 
-/* send button */
+            if(data.username === username){
+                msg.className = "chat-message me"
+            } else {
+                msg.className = "chat-message them"
+            }
 
-if(sendBtn){
-sendBtn.addEventListener("click", sendMessage);
-}
+            msg.innerHTML =
+                '<div class="bubble">'+ data.message +'</div>'
 
+            chatBox.appendChild(msg)
 
-/* enter key */
+            chatBox.scrollTop = chatBox.scrollHeight
+        })
 
-if(chatInput){
-chatInput.addEventListener("keypress", function(e){
+        let typingTimeout
 
-    if(e.key === "Enter"){
-        sendMessage();
+        input.addEventListener("input", function(){
+
+            socket.emit("typing", {
+                room: room,
+                username: username
+            })
+
+            clearTimeout(typingTimeout)
+
+            typingTimeout = setTimeout(function(){
+
+                socket.emit("stop_typing", {
+                    room: room
+                })
+
+            },1000)
+        })
+
+        socket.on("user_typing", function(data){
+            typingIndicator.innerText = data.username + " is typing..."
+        })
+
+        socket.on("user_stop_typing", function(){
+            typingIndicator.innerText = ""
+        })
+
     }
 
-});
 }
-
-
-/* typing indicator */
-
-let typingTimeout;
-
-if(chatInput){
-
-chatInput.addEventListener("input", function(){
-
-    socket.emit("typing",{
-        room: room,
-        username: username
-    });
-
-    clearTimeout(typingTimeout);
-
-    typingTimeout = setTimeout(function(){
-
-        socket.emit("stop_typing",{
-            room: room
-        });
-
-    },1000);
-
-});
-}
-
-
-/* receive message */
-
-socket.on("receive_message", function(data){
-
-    const messageElement = document.createElement("div");
-
-    messageElement.classList.add("chat-message");
-
-    messageElement.innerHTML = `
-        <strong>${data.username}</strong>: ${data.message}
-    `;
-
-    chatBox.appendChild(messageElement);
-
-    chatBox.scrollTop = chatBox.scrollHeight;
-
-});
-
-
-/* typing indicator display */
-
-socket.on("user_typing", function(data){
-
-    const indicator = document.getElementById("typingIndicator");
-
-    if(indicator){
-        indicator.innerText = data.username + " is typing...";
-    }
-
-});
-
-
-socket.on("user_stop_typing", function(){
-
-    const indicator = document.getElementById("typingIndicator");
-
-    if(indicator){
-        indicator.innerText = "";
-    }
-
-});
