@@ -2,7 +2,8 @@ from flask_socketio import SocketIO
 
 socketio = SocketIO(
     cors_allowed_origins="*",
-    async_mode="threading",
+    async_mode="threading"
+)
     
 
 online_users = set()
